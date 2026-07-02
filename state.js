@@ -68,6 +68,8 @@ const state = {
       startDist: 0,
       startScale: 1,
     },
+    revGalleryPhotos: null,
+    revGalleryIdx: -1,
     ticker: { timer: null, idx: 0, },
   },
 };

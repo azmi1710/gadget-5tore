@@ -766,7 +766,7 @@ function renderReviewList(el) {
     return '<tr id="rrow-' + r.id + '" class="' + (isSelected ? 'review-selected' : '') + '" style="' + (r.hidden ? 'opacity:.6' : '') + '">'
       + '<td><input type="checkbox" class="review-cb" id="rcb-' + r.id + '" ' + (isSelected ? 'checked' : '') + ' onchange="toggleReviewSelect(' + r.id + ')"></td>'
       + '<td><div style="display:flex;align-items:center;gap:8px"><img src="https://ui-avatars.com/api/?name=' + encodeURIComponent(r.name || 'U') + '&background=D9503F&color=fff&size=64&bold=true" style="width:30px;height:30px;border-radius:50%;object-fit:cover"><div><div style="font-weight:600;font-size:12px;color:var(--navy)">' + esc(r.name || 'Anonim') + '</div>'
-      + (r.photos && r.photos.length ? '<div style="font-size:9px;color:var(--muted)"><i class="fas fa-image"></i> ' + r.photos.length + ' foto</div>' : '')
+      + (r.photos && r.photos.length ? '<div style="font-size:9px;color:var(--accent);cursor:pointer" onclick="viewReviewPhotos(' + r.id + ')" title="Lihat ' + r.photos.length + ' foto"><i class="fas fa-image"></i> ' + r.photos.length + ' foto</div>' : '')
       + '</div></div></td>'
       + '<td>' + stars + '</td>'
       + '<td style="white-space:normal;max-width:250px;color:var(--muted);font-size:11px" title="' + esc(r.comment || '') + '">' + esc(shortComment) + '</td>'
@@ -3509,7 +3509,66 @@ function openZoom(src) {
   document.getElementById('zoomOverlay').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
-function closeZoom() { document.getElementById('zoomOverlay').classList.remove('show'); document.body.style.overflow = ''; }
+function closeZoom() { document.getElementById('zoomOverlay').classList.remove('show'); document.body.style.overflow = ''; state.ui.revGalleryPhotos = null; state.ui.revGalleryIdx = -1; }
+function viewReviewPhotos(id) {
+  const rev = state.db.reviews.find(r => r.id === id);
+  if (!rev || !rev.photos || !rev.photos.length) return;
+  if (rev.photos.length === 1) { openZoomForGallery(rev.photos, 0); return; }
+  state.ui.revGalleryPhotos = rev.photos;
+  state.ui.revGalleryIdx = 0;
+  let existing = document.getElementById('revGalleryModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'revGalleryModal';
+  modal.className = 'modal-bg show';
+  modal.style.zIndex = '340';
+  modal.innerHTML = '<div style="background:var(--bg2);border-radius:var(--radius);max-width:560px;width:95%;max-height:85vh;overflow:auto;box-shadow:var(--sh-xl);padding:20px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><h3 style="margin:0;font-size:15px;font-weight:700"><i class="fas fa-images" style="margin-right:8px;color:var(--accent)"></i>Foto Ulasan — ' + esc(rev.name) + '</h3><button class="btn btn-ghost btn-sm" onclick="closeRevGallery()"><i class="fas fa-times"></i></button></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">' + rev.photos.map((p, i) => '<div style="position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:1;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="closeRevGallery();openZoomForGallery(state.ui.revGalleryPhotos,' + i + ')" onmouseenter="this.style.borderColor=\'var(--accent)\'" onmouseleave="this.style.borderColor=\'var(--border)\'"><img src="' + esc(p) + '" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"></div>').join('') + '</div></div>';
+  modal.addEventListener('click', function(e) { if (e.target === modal) closeRevGallery(); });
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
+}
+function closeRevGallery() {
+  const m = document.getElementById('revGalleryModal');
+  if (m) m.remove();
+  document.body.style.overflow = '';
+}
+function openZoomForGallery(photos, idx) {
+  state.ui.revGalleryPhotos = photos;
+  state.ui.revGalleryIdx = idx;
+  openZoom(photos[idx]);
+  updateZoomNav();
+}
+function updateZoomNav() {
+  let nav = document.getElementById('zoomNav');
+  const photos = state.ui.revGalleryPhotos;
+  if (!photos || photos.length <= 1) { if (nav) nav.remove(); return; }
+  if (!nav) {
+    nav = document.createElement('div');
+    nav.id = 'zoomNav';
+    nav.style.cssText = 'position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10';
+    nav.innerHTML = '<button id="zoomPrev" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i class="fas fa-chevron-left"></i></button><span id="zoomCounter" style="color:rgba(255,255,255,.5);font-size:12px;display:flex;align-items:center;min-width:50px;justify-content:center">1/3</span><button id="zoomNext" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i class="fas fa-chevron-right"></i></button>';
+    document.getElementById('zoomOverlay').appendChild(nav);
+    document.getElementById('zoomPrev').addEventListener('click', function(e) { e.stopPropagation(); navZoom(-1); });
+    document.getElementById('zoomNext').addEventListener('click', function(e) { e.stopPropagation(); navZoom(1); });
+  }
+  nav.style.display = 'flex';
+  document.getElementById('zoomCounter').textContent = (state.ui.revGalleryIdx + 1) + '/' + photos.length;
+}
+function navZoom(dir) {
+  const photos = state.ui.revGalleryPhotos;
+  if (!photos || photos.length <= 1) return;
+  let idx = state.ui.revGalleryIdx + dir;
+  if (idx < 0) idx = photos.length - 1;
+  if (idx >= photos.length) idx = 0;
+  state.ui.revGalleryIdx = idx;
+  const img = document.getElementById('zoomImg');
+  img.src = photos[idx];
+  img.style.transform = 'scale(1)';
+  state.ui.zoom.scale = 1;
+  document.getElementById('zoomCounter').textContent = (idx + 1) + '/' + photos.length;
+}
 function toggleFilterPanel() {
   const p = document.getElementById('filterPanel');
   const b = document.getElementById('filterToggle');
