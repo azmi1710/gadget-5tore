@@ -1,0 +1,263 @@
+/* ============================================
+   presence.css — Online Presence Indicator
+   Gadget 5tore Dashboard
+   ============================================ */
+
+/* --- Container di dashboard top bar --- */
+.presence-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+/* --- Per-role clickable group --- */
+.presence-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  user-select: none;
+}
+
+.presence-group:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* --- Green dot --- */
+.presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22C55E;
+  box-shadow: 0 0 6px rgba(34,197,94,0.5);
+  animation: presencePulse 2.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.presence-dot-sm {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22C55E;
+  flex-shrink: 0;
+}
+
+@keyframes presencePulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+  50% { box-shadow: 0 0 12px rgba(34,197,94,0.8); }
+}
+
+/* --- Label & count --- */
+.presence-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg2);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+
+.presence-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* Per-role accent colors */
+.presence-group--admin .presence-count { background: linear-gradient(135deg, #C8A44E, #8E6D1E); }
+.presence-group--editor .presence-count { background: linear-gradient(135deg, #4F46E5, #312E81); }
+.presence-group--viewer .presence-count { background: linear-gradient(135deg, #6B7280, #374151); }
+
+/* --- Popover --- */
+.presence-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 12px);
+  box-shadow: var(--sh-lg, 0 16px 64px rgba(0,0,0,0.12));
+  z-index: 200;
+  overflow: hidden;
+  animation: popoverIn 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+@keyframes popoverIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.presence-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.presence-popover-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.presence-popover-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.presence-popover-list {
+  padding: 6px 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.presence-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  transition: background 0.15s;
+}
+
+.presence-popover-item:hover {
+  background: var(--accent-dim);
+}
+
+.presence-popover-item.is-me {
+  background: var(--accent-dim);
+}
+
+.presence-popover-item.is-me .presence-popover-name::after {
+  content: ' (Anda)';
+  font-weight: 400;
+  color: var(--accent);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.presence-popover-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.presence-popover-time {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.presence-popover-empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ===========================
+   DARK MODE
+   =========================== */
+body.dark .presence-group {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+
+body.dark .presence-group:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: var(--accent);
+}
+
+body.dark .presence-label { color: #fff; }
+
+body.dark .presence-popover {
+  background: #1a1a2e;
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+}
+
+body.dark .presence-popover-item:hover {
+  background: rgba(200,164,78,0.08);
+}
+
+body.dark .presence-popover-item.is-me {
+  background: rgba(200,164,78,0.1);
+}
+
+body.dark .presence-popover-name { color: #fff; }
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+  .presence-indicator {
+    gap: 6px;
+  }
+
+  .presence-group {
+    padding: 4px 8px;
+    gap: 4px;
+    border-radius: 16px;
+  }
+
+  .presence-label {
+    font-size: 10px;
+  }
+
+  .presence-count {
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
+    padding: 0 5px;
+  }
+
+  .presence-popover {
+    width: 220px;
+    right: -8px;
+  }
+
+  .presence-popover-item { padding: 7px 12px; }
+  .presence-popover-name { font-size: 11px; }
+  .presence-popover-time { font-size: 9px; }
+}
+
+@media (max-width: 480px) {
+  .presence-label { display: none; }
+
+  .presence-group {
+    padding: 6px;
+    gap: 0;
+  }
+
+  .presence-count {
+    min-width: 22px;
+    height: 22px;
+  }
+
+  .presence-popover {
+    width: 200px;
+    right: -16px;
+  }
+}
