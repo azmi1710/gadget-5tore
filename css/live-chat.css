@@ -146,6 +146,51 @@
 }
 
 .lc-status-dot.offline { background: #9CA3AF; }
+.lc-status-dot.connecting { background: #F59E0B; animation: lc-pulse-dot 1.5s infinite; }
+
+@keyframes lc-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Mode Badge */
+.lc-mode-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-left: 4px;
+  letter-spacing: 0.3px;
+}
+.lc-mode-badge--ai {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+.lc-mode-badge--connecting {
+  background: #FEF3C7;
+  color: #B45309;
+}
+.lc-mode-badge--admin {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* Disabled input state */
+.lc-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg, #F4F1EA);
+}
+.lc-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Dark mode variants */
+[data-theme="dark"] .lc-mode-badge--ai { background: #1E3A5F; color: #93C5FD; }
+[data-theme="dark"] .lc-mode-badge--connecting { background: #422006; color: #FCD34D; }
+[data-theme="dark"] .lc-mode-badge--admin { background: #064E3B; color: #6EE7B7; }
+[data-theme="dark"] .lc-input:disabled { background: var(--bg, #1A1A1A); }
 
 .lc-header-close {
   width: 32px;
@@ -488,6 +533,102 @@
   border-radius: 8px;
 }
 
+/* --- Inbox Tabs --- */
+.lc-inbox-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px 10px;
+  flex-shrink: 0;
+}
+
+.lc-inbox-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #6E6A5E);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.lc-inbox-tab:hover { background: var(--accent-dim, rgba(200, 164, 78, 0.08)); }
+
+.lc-inbox-tab.active {
+  background: var(--accent-dim, rgba(200, 164, 78, 0.15));
+  color: var(--accent, #C8A44E);
+  font-weight: 700;
+}
+
+.lc-inbox-tab-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  color: #fff;
+}
+
+.lc-inbox-tab-badge--active { background: #15803D; }
+.lc-inbox-tab-badge--history { background: #6B7280; }
+
+/* --- Inbox Summary --- */
+.lc-inbox-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 0 16px 10px;
+  flex-shrink: 0;
+}
+
+.lc-inbox-summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: var(--bg, #F4F1EA);
+}
+
+.lc-inbox-summary-num {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lc-inbox-summary-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted, #6E6A5E);
+  white-space: nowrap;
+}
+
+.lc-inbox-summary-card--ai .lc-inbox-summary-num { color: #6366F1; }
+.lc-inbox-summary-card--ai { background: rgba(99, 102, 241, 0.06); }
+
+.lc-inbox-summary-card--waiting .lc-inbox-summary-num { color: #D97706; }
+.lc-inbox-summary-card--waiting { background: rgba(245, 158, 11, 0.06); }
+
+.lc-inbox-summary-card--active .lc-inbox-summary-num { color: #15803D; }
+.lc-inbox-summary-card--active { background: rgba(21, 128, 61, 0.06); }
+
+.lc-inbox-summary-card--closed .lc-inbox-summary-num { color: #6B7280; }
+.lc-inbox-summary-card--closed { background: rgba(107, 114, 128, 0.06); }
+
 .lc-inbox-sessions-list {
   flex: 1;
   overflow-y: auto;
@@ -555,6 +696,16 @@
 .lc-session-mode--admin {
   background: rgba(200, 164, 78, 0.15);
   color: var(--accent, #C8A44E);
+}
+
+.lc-session-mode--connecting {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+}
+
+.lc-session-mode--closed {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6B7280;
 }
 
 .lc-session-preview {
@@ -863,6 +1014,15 @@ body.dark .lc-session-item.active { background: rgba(200, 164, 78, 0.08); border
 body.dark .lc-session-name { color: #fff; }
 
 body.dark .lc-session-mode--ai { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+body.dark .lc-session-mode--connecting { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+body.dark .lc-session-mode--closed { background: rgba(107, 114, 128, 0.15); color: #9CA3AF; }
+
+body.dark .lc-inbox-tab { color: rgba(255, 255, 255, 0.4); }
+body.dark .lc-inbox-tab:hover { background: rgba(255, 255, 255, 0.05); }
+body.dark .lc-inbox-tab.active { background: rgba(200, 164, 78, 0.12); color: var(--accent); }
+
+body.dark .lc-inbox-summary-card { background: rgba(255, 255, 255, 0.03); }
+body.dark .lc-inbox-summary-label { color: rgba(255, 255, 255, 0.35); }
 
 body.dark .lc-inbox-chat-head {
   background: #1a1a2e;
@@ -958,4 +1118,131 @@ body.dark .lc-inbox-input::placeholder { color: rgba(255, 255, 255, 0.3); }
 
   .lc-inbox-sessions { max-height: 200px; }
   .lc-inbox-chat { min-height: 350px; }
+}
+
+/* ===========================
+   HISTORY DELETE BUTTONS
+   =========================== */
+
+.lc-session-delete-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #6E6A5E);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.lc-session-delete-btn:hover {
+  background: rgba(185, 28, 28, 0.1);
+  color: var(--danger, #B91C1C);
+}
+
+.lc-session-item.is-history .lc-session-time {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* History bar (info + clear all) */
+.lc-inbox-history-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 8px;
+  flex-shrink: 0;
+}
+
+.lc-inbox-history-info {
+  font-size: 11px;
+  color: var(--muted, #6E6A5E);
+  font-weight: 600;
+}
+
+.lc-inbox-history-clear {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #DCD5C3);
+  background: transparent;
+  color: var(--muted, #6E6A5E);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.lc-inbox-history-clear:hover {
+  border-color: var(--danger, #B91C1C);
+  color: var(--danger, #B91C1C);
+  background: rgba(185, 28, 28, 0.06);
+}
+
+/* "Hapus Semua" link — sits inside tab bar */
+.lc-clear-history-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border, #DCD5C3);
+  background: var(--bg, #F4F1EA);
+  color: var(--muted, #6E6A5E);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.lc-clear-history-link i {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.lc-clear-history-link:hover {
+  border-color: var(--danger, #B91C1C);
+  color: var(--danger, #B91C1C);
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.lc-clear-history-link:hover i {
+  opacity: 1;
+}
+
+body.dark .lc-clear-history-link {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+body.dark .lc-clear-history-link:hover {
+  border-color: #EF4444;
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Dark mode - history */
+body.dark .lc-session-delete-btn { color: rgba(255, 255, 255, 0.35); }
+body.dark .lc-session-delete-btn:hover { background: rgba(239, 68, 68, 0.12); color: #EF4444; }
+
+body.dark .lc-inbox-history-bar { border-color: rgba(255, 255, 255, 0.04); }
+body.dark .lc-inbox-history-info { color: rgba(255, 255, 255, 0.35); }
+
+body.dark .lc-inbox-history-clear {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+}
+body.dark .lc-inbox-history-clear:hover {
+  border-color: #EF4444;
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.08);
 }

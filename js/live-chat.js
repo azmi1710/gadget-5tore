@@ -1,20 +1,3 @@
-/* ============================================
-   live-chat.js — Live Chat (Admin Inbox + Customer Widget)
-   Gadget 5tore
-   ============================================
-   CUSTOMER SIDE:
-   - FAB di halaman katalog
-   - Form nama + HP (disimpan di localStorage)
-   - Chat realtime via Supabase
-   - Mode 'ai' → forward ke n8n webhook
-   - Mode 'admin' → tunggu admin reply
-
-   ADMIN SIDE:
-   - Panel "Chat" di sidebar dashboard
-   - 2-column inbox (session list + messages)
-   - Takeover → ubah mode 'ai' ke 'admin'
-   - Reply ke customer
-   ============================================ */
 
 (function () {
   'use strict';
@@ -24,7 +7,7 @@
   var $ = function (id) { return document.getElementById(id); };
 
   // ── Config ──────────────────────────────────────
-  var N8N_LIVE_CHAT_URL = (typeof N8N_LIVE_CHAT_URL !== 'undefined') ? N8N_LIVE_CHAT_URL : '';
+  var N8N_LIVE_CHAT_URL = window.N8N_LIVE_CHAT_URL || '';
   var LS_KEY = 'g5chat_session';
 
   // ── Internal State ──────────────────────────────
@@ -45,6 +28,9 @@
     sessions: [],
     adminMessages: {},
     inboxObserver: null,
+    activeTab: 'active',
+    closedSessions: [],
+    closedCount: 0,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -303,7 +289,7 @@
       + '<div class="lc-header-avatar"><i class="fas fa-comments"></i></div>'
       + '<div class="lc-header-info">'
       + '<div class="lc-header-name">Live Chat</div>'
-      + '<div class="lc-header-status"><span class="lc-status-dot"></span> <span id="lcHeaderStatusText">Terhubung</span></div>'
+      + '<div class="lc-header-status"><span class="lc-status-dot" id="lcStatusDot"></span> <span id="lcHeaderStatusText">Terhubung</span> <span class="lc-mode-badge lc-mode-badge--ai" id="lcModeBadge">\uD83E\uDD16 AI</span></div>'
       + '</div>'
       + '<button class="lc-header-close" onclick="window.__lcToggle()"><i class="fas fa-times"></i></button>'
       + '</div>'
@@ -325,6 +311,10 @@
   }
 
   async function loadCustomerMessages() {
+    // Set initial mode tracking
+    if (ctx._prevMode == null && state && state.session) {
+      ctx._prevMode = state.session.mode || 'ai';
+    }
     if (!ctx.sessionId || !state || !state.session || !state.session.sb) return;
 
     try {
@@ -504,6 +494,7 @@
       });
 
       var reply = '';
+      var shouldEscalate = false;
 
       if (res.ok) {
         var data = await res.json();
@@ -511,12 +502,12 @@
         if (typeof reply !== 'string' || !reply) {
           reply = JSON.stringify(data);
         }
+        shouldEscalate = !!data.escalate;
       } else {
         reply = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
       }
 
-      // Insert AI reply as 'customer' type with AI marker (or we could add a new sender_type)
-      // Using sender_type='admin' with sender_name='AI Assistant' so customer sees it on the left
+      // Insert AI reply as 'admin' type with sender_name='AI Assistant'
       var { error } = await state.session.sb
         .from('chat_messages')
         .insert([{
@@ -536,10 +527,70 @@
         });
         renderCustomerMessages();
       }
+
+      // ── Auto-escalation: switch session to 'connecting' ──
+      if (shouldEscalate && state && state.session && state.session.sb) {
+        console.log('[live-chat] AI escalated, switching session to connecting');
+        await state.session.sb
+          .from('chat_sessions')
+          .update({ mode: 'connecting' })
+          .eq('session_id', ctx.sessionId);
+        // Update local mode so subsequent messages don't go to AI
+        if (state.session) state.session.mode = 'connecting';
+        // Update customer UI immediately
+        updateCustomerChatStatus('connecting');
+        ctx._prevMode = 'connecting';
+      }
     } catch (e) {
       console.error('[live-chat] webhook error:', e);
     } finally {
       if (typingEl) typingEl.classList.remove('show');
+    }
+  }
+
+  // ── Customer Status & Input Control ─────────────
+  function updateCustomerChatStatus(mode, adminName) {
+    var statusText = $('lcHeaderStatusText');
+    var statusDot = $('lcStatusDot');
+    var modeBadge = $('lcModeBadge');
+    var input = $('lcInput');
+    var sendBtn = $('lcSendBtn');
+    if (!statusText) return;
+
+    if (mode === 'ai') {
+      statusText.textContent = 'Terhubung';
+      if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
+      if (modeBadge) { modeBadge.textContent = '\uD83E\uDD16 AI'; modeBadge.className = 'lc-mode-badge lc-mode-badge--ai'; }
+      if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
+      if (sendBtn) sendBtn.disabled = false;
+    } else if (mode === 'connecting') {
+      statusText.textContent = 'Menunggu admin...';
+      if (statusDot) { statusDot.classList.remove('offline'); statusDot.classList.add('connecting'); }
+      if (modeBadge) { modeBadge.textContent = '\u23F3 Menunggu'; modeBadge.className = 'lc-mode-badge lc-mode-badge--connecting'; }
+      if (input) { input.disabled = true; input.placeholder = 'Menunggu admin menghubungi Anda...'; }
+      if (sendBtn) sendBtn.disabled = true;
+      ctx.messages.push({
+        id: Date.now(),
+        sender_type: 'system',
+        sender_name: '',
+        message: 'Pertanyaan Anda memerlukan bantuan admin. Mohon tunggu sebentar...',
+        created_at: new Date().toISOString(),
+      });
+      renderCustomerMessages();
+    } else if (mode === 'admin') {
+      statusText.textContent = adminName ? 'Admin: ' + adminName : 'Admin sedang melayani';
+      if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
+      if (modeBadge) { modeBadge.textContent = '\uD83D\uDC64 Admin'; modeBadge.className = 'lc-mode-badge lc-mode-badge--admin'; }
+      if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
+      if (sendBtn) sendBtn.disabled = false;
+      ctx.messages.push({
+        id: Date.now() + 1,
+        sender_type: 'system',
+        sender_name: '',
+        message: adminName ? (adminName + ' telah terhubung.') : 'Admin telah terhubung.',
+        created_at: new Date().toISOString(),
+      });
+      renderCustomerMessages();
     }
   }
 
@@ -624,15 +675,24 @@
           return;
         }
 
-        // Update status text if admin took over
-        var statusText = $('lcHeaderStatusText');
-        if (statusText) {
-          if (s.mode === 'admin') {
-            statusText.textContent = 'Admin: ' + (s.handled_by || '');
-          } else {
-            statusText.textContent = 'Terhubung';
+        // Handle mode changes for customer UI
+        if (s.mode === 'admin' && (ctx._prevMode === 'connecting' || ctx._prevMode === 'ai')) {
+          updateCustomerChatStatus('admin', s.handled_by || 'Admin');
+        } else if (s.mode === 'connecting' && ctx._prevMode !== 'connecting') {
+          updateCustomerChatStatus('connecting');
+        } else if (s.mode === 'ai') {
+          updateCustomerChatStatus('ai');
+        } else {
+          var statusText = $('lcHeaderStatusText');
+          if (statusText) {
+            if (s.mode === 'admin') {
+              statusText.textContent = 'Admin: ' + (s.handled_by || '');
+            } else {
+              statusText.textContent = 'Terhubung';
+            }
           }
         }
+        ctx._prevMode = s.mode;
       })
       .subscribe(function (status) {
         if (status === 'SUBSCRIBED') {
@@ -724,6 +784,18 @@
       + '<h3><i class="fas fa-comments"></i> Sesi Chat</h3>'
       + '<span class="lc-inbox-sessions-count" id="lcSessionCount">0</span>'
       + '</div>'
+      + '<div class="lc-inbox-tabs" id="lcInboxTabs">'
+      + '<button class="lc-inbox-tab active" data-tab="active" onclick="window.__lcSwitchTab(\'active\')">'
+      + 'Aktif <span class="lc-inbox-tab-badge lc-inbox-tab-badge--active" id="lcTabBadgeActive">0</span>'
+      + '</button>'
+      + '<button class="lc-inbox-tab" data-tab="history" onclick="window.__lcSwitchTab(\'history\')">'
+      + 'Riwayat <span class="lc-inbox-tab-badge lc-inbox-tab-badge--history" id="lcTabBadgeHistory">0</span>'
+      + '</button>'
+      + '<span id="lcClearHistoryWrap" style="display:none;margin-left:auto;padding:3px 0">'
+      + '<button class="lc-clear-history-link" onclick="window.__lcClearHistory()"><i class="fas fa-trash-alt" style="margin-right:3px;font-size:10px"></i>Hapus Semua</button>'
+      + '</span>'
+      + '</div>'
+      + '<div class="lc-inbox-summary" id="lcInboxSummary"></div>'
       + '<div class="lc-inbox-sessions-list" id="lcSessionList"></div>'
       + '</div>'
       + '<div class="lc-inbox-chat" id="lcInboxChat">'
@@ -751,11 +823,23 @@
 
       ctx.sessions = data || [];
       renderSessionList();
+      renderInboxSummary();
+      updateTabBadges();
       updateSidebarBadge();
+
+      // Also load closed count
+      loadClosedCount();
     } catch (e) {
       console.error('[live-chat] load sessions error:', e);
       renderSessionList();
     }
+  }
+
+  function getStatusInfo(s) {
+    if (s.status === 'closed') return { label: 'Ditutup', cls: 'lc-session-mode--closed' };
+    if (s.mode === 'connecting') return { label: 'Menunggu', cls: 'lc-session-mode--connecting' };
+    if (s.mode === 'admin') return { label: 'Aktif', cls: 'lc-session-mode--admin' };
+    return { label: 'AI', cls: 'lc-session-mode--ai' };
   }
 
   function renderSessionList() {
@@ -763,28 +847,31 @@
     var countEl = $('lcSessionCount');
     if (!listEl) return;
 
-    if (countEl) countEl.textContent = ctx.sessions.length;
+    var isHistory = ctx.activeTab === 'history';
+    var list = isHistory ? ctx.closedSessions : ctx.sessions;
 
-    if (!ctx.sessions.length) {
+    if (countEl) countEl.textContent = list.length;
+
+    if (!list.length) {
       listEl.innerHTML =
         '<div class="lc-sessions-empty">'
         + '<i class="fas fa-inbox"></i>'
-        + '<span>Belum ada sesi chat</span>'
+        + '<span>' + (isHistory ? 'Belum ada riwayat' : 'Belum ada sesi chat') + '</span>'
         + '</div>';
       return;
     }
 
-    listEl.innerHTML = ctx.sessions.map(function (s) {
+    listEl.innerHTML = list.map(function (s) {
       var isActive = ctx.activeSessionId === s.session_id;
       var initial = (s.customer_name || 'C').charAt(0).toUpperCase();
-      var modeCls = s.mode === 'ai' ? 'lc-session-mode--ai' : 'lc-session-mode--admin';
+      var statusInfo = getStatusInfo(s);
       var unreadCls = s.unread_by_admin > 0 ? 'show' : '';
 
       return '<div class="lc-session-item' + (isActive ? ' active' : '') + (s.unread_by_admin > 0 ? ' has-unread' : '') + '" '
         + 'onclick="window.__lcSelectSession(\'' + s.session_id + '\')">'
         + '<div class="lc-session-avatar">' + esc(initial) + '</div>'
         + '<div class="lc-session-info">'
-        + '<div class="lc-session-name">' + esc(s.customer_name) + ' <span class="lc-session-mode ' + modeCls + '">' + esc(s.mode) + '</span></div>'
+        + '<div class="lc-session-name">' + esc(s.customer_name) + ' <span class="lc-session-mode ' + statusInfo.cls + '">' + statusInfo.label + '</span></div>'
         + '<div class="lc-session-preview">' + esc(s.last_message || 'Belum ada pesan') + '</div>'
         + '</div>'
         + '<div class="lc-session-meta">'
@@ -808,21 +895,139 @@
     }
   }
 
+  // ── Inbox Summary Cards ───────────────────────
+  function renderInboxSummary() {
+    var el = $('lcInboxSummary');
+    if (!el) return;
+
+    var ai = 0, waiting = 0, active = 0;
+    for (var i = 0; i < ctx.sessions.length; i++) {
+      var s = ctx.sessions[i];
+      if (s.mode === 'connecting') waiting++;
+      else if (s.mode === 'admin') active++;
+      else ai++;
+    }
+
+    el.innerHTML =
+      '<div class="lc-inbox-summary-card lc-inbox-summary-card--ai">'
+      + '<span class="lc-inbox-summary-num">' + ai + '</span>'
+      + '<span class="lc-inbox-summary-label">AI</span>'
+      + '</div>'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--waiting">'
+      + '<span class="lc-inbox-summary-num">' + waiting + '</span>'
+      + '<span class="lc-inbox-summary-label">Menunggu</span>'
+      + '</div>'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--active">'
+      + '<span class="lc-inbox-summary-num">' + active + '</span>'
+      + '<span class="lc-inbox-summary-label">Aktif</span>'
+      + '</div>'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--closed">'
+      + '<span class="lc-inbox-summary-num">' + ctx.closedCount + '</span>'
+      + '<span class="lc-inbox-summary-label">Selesai</span>'
+      + '</div>';
+  }
+
+  // ── Tab Badges ──────────────────────────────────
+  function updateTabBadges() {
+    var activeBadge = $('lcTabBadgeActive');
+    var historyBadge = $('lcTabBadgeHistory');
+    if (activeBadge) activeBadge.textContent = ctx.sessions.length;
+    if (historyBadge) historyBadge.textContent = ctx.closedCount;
+  }
+
+  // ── Tab Switching ───────────────────────────────
+  function switchInboxTab(tab) {
+    ctx.activeTab = tab;
+    ctx.activeSessionId = null;
+
+    // Update tab buttons
+    var tabs = document.querySelectorAll('.lc-inbox-tab');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle('active', tabs[i].dataset.tab === tab);
+    }
+
+    // Hide/show summary (only show on active tab)
+    var summary = $('lcInboxSummary');
+    if (summary) summary.style.display = tab === 'active' ? '' : 'none';
+
+    if (tab === 'history') {
+      loadClosedSessions();
+      var cw = $('lcClearHistoryWrap');
+      if (cw) cw.style.display = ctx.closedCount > 0 ? '' : 'none';
+    } else {
+      renderSessionList();
+      var cw = $('lcClearHistoryWrap');
+      if (cw) cw.style.display = 'none';
+    }
+
+    // Reset chat area
+    var chatEl = $('lcInboxChat');
+    if (chatEl) {
+      chatEl.innerHTML =
+        '<div class="lc-inbox-empty">'
+        + '<i class="fas fa-comments"></i>'
+        + '<h3>' + (tab === 'history' ? 'Riwayat Chat' : 'Inbox Chat') + '</h3>'
+        + '<p>Pilih sesi untuk melihat percakapan</p>'
+        + '</div>';
+    }
+  }
+
+  // ── Load Closed Count ───────────────────────────
+  function loadClosedCount() {
+    if (!state || !state.session || !state.session.sb) return;
+    state.session.sb
+      .from('chat_sessions')
+      .select('session_id', { count: 'exact', head: true })
+      .eq('status', 'closed')
+      .then(function (res) {
+        ctx.closedCount = res.count || 0;
+        updateTabBadges();
+        renderInboxSummary();
+        // Update clear history link visibility
+        var cw = $('lcClearHistoryWrap');
+        if (cw) cw.style.display = (ctx.closedCount > 0 && ctx.activeTab === 'history') ? '' : 'none';
+      })
+      .catch(function () { /* ignore */ });
+  }
+
+  // ── Load Closed Sessions ────────────────────────
+  function loadClosedSessions() {
+    if (!state || !state.session || !state.session.sb) return;
+
+    state.session.sb
+      .from('chat_sessions')
+      .select('*')
+      .eq('status', 'closed')
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(50)
+      .then(function (res) {
+        ctx.closedSessions = res.data || [];
+        renderSessionList();
+      })
+      .catch(function (e) {
+        console.error('[live-chat] load closed sessions error:', e);
+        renderSessionList();
+      });
+  }
+
   // ── Select Session ─────────────────────────────
   async function selectSession(sessionId) {
     ctx.activeSessionId = sessionId;
     renderSessionList();
 
-    // Mark as read
+    // Mark as read (only for active sessions)
     if (state && state.session && state.session.sb) {
-      await state.session.sb
-        .from('chat_sessions')
-        .update({ unread_by_admin: 0 })
-        .eq('session_id', sessionId);
+      var isClosed = ctx.activeTab === 'history';
+      if (!isClosed) {
+        await state.session.sb
+          .from('chat_sessions')
+          .update({ unread_by_admin: 0 })
+          .eq('session_id', sessionId);
+      }
     }
 
     // Reload to get updated unread
-    loadAdminSessions();
+    if (ctx.activeTab !== 'history') loadAdminSessions();
     loadAdminMessages(sessionId);
   }
 
@@ -832,10 +1037,13 @@
     var chatEl = $('lcInboxChat');
     if (!chatEl) return;
 
-    var session = ctx.sessions.find(function (s) { return s.session_id === sessionId; });
+    var isHistory = ctx.activeTab === 'history';
+    var sessionList = isHistory ? ctx.closedSessions : ctx.sessions;
+    var session = sessionList.find(function (s) { return s.session_id === sessionId; });
     if (!session) return;
 
-    var isAdmin = session.mode === 'admin' &&
+    var isClosed = session.status === 'closed';
+    var isAdmin = !isClosed && session.mode === 'admin' &&
       session.handled_by === getAdminName();
 
     chatEl.innerHTML =
@@ -846,19 +1054,24 @@
       + '<div class="lc-inbox-chat-phone">' + (session.customer_phone ? esc(session.customer_phone) : 'Tidak ada nomor HP') + '</div>'
       + '</div>'
       + '<div class="lc-inbox-chat-actions">'
-      + (session.mode === 'ai'
-        ? '<button class="lc-takeover-btn" onclick="window.__lcTakeover(\'' + sessionId + '\')"><i class="fas fa-hand-paper" style="margin-right:4px"></i>Takeover</button>'
-        : '<button class="lc-takeover-btn taken" disabled><i class="fas fa-check" style="margin-right:4px"></i>' + esc(session.handled_by || 'Ditangani') + '</button>')
-      + '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i class="fas fa-times" style="margin-right:3px"></i>Tutup</button>'
+      + (isClosed
+        ? '<span style="font-size:11px;color:var(--muted,#6E6A5E);font-weight:600"><i class="fas fa-lock" style="margin-right:4px"></i>Ditutup</span>'
+        : (session.mode === 'admin'
+          ? '<button class="lc-takeover-btn taken" disabled><i class="fas fa-check" style="margin-right:4px"></i>' + esc(session.handled_by || 'Ditangani') + '</button>'
+          : '<button class="lc-takeover-btn" onclick="window.__lcTakeover(\'' + sessionId + '\')"><i class="fas fa-hand-paper" style="margin-right:4px"></i>Takeover</button>'))
+      + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + s.session_id + '\')" title="Hapus sesi"><i class="fas fa-trash"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i class="fas fa-times" style="margin-right:3px"></i>Tutup</button>')
       + '</div>'
       + '</div>'
       + '<div class="lc-inbox-messages" id="lcAdminMessages"></div>'
       + '<div class="lc-inbox-input-area">'
-      + (isAdmin
-        ? '<textarea class="lc-inbox-input" id="lcAdminInput" placeholder="Balas pesan..." rows="1"></textarea>'
-          + '<button class="lc-inbox-send" id="lcAdminSendBtn"><i class="fas fa-paper-plane"></i></button>'
-        : '<textarea class="lc-inbox-input" id="lcAdminInput" disabled placeholder="' + (session.mode === 'admin' ? 'Ditangani oleh ' + esc(session.handled_by || 'admin lain') : 'Klik Takeover untuk mengambil alih dan membalas') + '" rows="1" style="opacity:0.6"></textarea>'
-          + '<button class="lc-inbox-send" id="lcAdminSendBtn" disabled style="opacity:0.6"><i class="fas fa-paper-plane"></i></button>')
+      + (isClosed
+        ? '<textarea class="lc-inbox-input" disabled placeholder="Sesi telah ditutup" rows="1" style="opacity:0.5"></textarea>'
+          + '<button class="lc-inbox-send" disabled style="opacity:0.4"><i class="fas fa-paper-plane"></i></button>'
+        : (isAdmin
+          ? '<textarea class="lc-inbox-input" id="lcAdminInput" placeholder="Balas pesan..." rows="1"></textarea>'
+            + '<button class="lc-inbox-send" id="lcAdminSendBtn"><i class="fas fa-paper-plane"></i></button>'
+          : '<textarea class="lc-inbox-input" id="lcAdminInput" disabled placeholder="' + (session.mode === 'admin' ? 'Ditangani oleh ' + esc(session.handled_by || 'admin lain') : 'Klik Takeover untuk mengambil alih dan membalas') + '" rows="1" style="opacity:0.6"></textarea>'
+            + '<button class="lc-inbox-send" id="lcAdminSendBtn" disabled style="opacity:0.6"><i class="fas fa-paper-plane"></i></button>'))
       + '</div>';
 
     // Load messages
@@ -976,13 +1189,26 @@
     var adminName = getAdminName();
 
     try {
-      await state.session.sb
+      // Race guard: only update if mode is NOT already 'admin' (prevents double takeover)
+      var { data: updated, error } = await state.session.sb
         .from('chat_sessions')
         .update({
           mode: 'admin',
           handled_by: adminName,
         })
-        .eq('session_id', sessionId);
+        .eq('session_id', sessionId)
+        .neq('mode', 'admin')
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // If no rows were updated, another admin already took over
+      if (!updated) {
+        if (typeof toast === 'function') toast('Chat sudah diambil alih admin lain', 'warning');
+        loadAdminSessions();
+        return;
+      }
 
       // Update local session data immediately so UI reflects without waiting for reload
       var localSession = ctx.sessions.find(function (s) { return s.session_id === sessionId; });
@@ -1037,6 +1263,7 @@
       }
 
       loadAdminSessions();
+      loadClosedCount();
       if (typeof toast === 'function') toast('Sesi chat ditutup');
     } catch (e) {
       console.error('[live-chat] close session error:', e);
@@ -1098,6 +1325,58 @@
   }
 
 
+  // ── Delete Session ──────────────────────────
+  async function deleteSession(sessionId) {
+    if (!state || !state.session || !state.session.sb) return;
+    var ok = typeof showConfirm === 'function' ? await showConfirm('Hapus sesi chat ini? Pesan-pesan akan ikut terhapus.', 'Hapus Sesi', 'delete') : confirm('Hapus sesi chat ini?');
+    if (!ok) return;
+
+    try {
+      await state.session.sb.from('chat_messages').delete().eq('session_id', sessionId);
+      await state.session.sb.from('chat_sessions').delete().eq('session_id', sessionId);
+      ctx.closedSessions = ctx.closedSessions.filter(function(s) { return s.session_id !== sessionId; });
+      ctx.closedCount = Math.max(0, ctx.closedCount - 1);
+      updateTabBadges();
+      renderInboxSummary();
+      renderSessionList();
+      if (ctx.activeSessionId === sessionId) {
+        ctx.activeSessionId = null;
+        var chatEl = $('lcInboxChat');
+        if (chatEl) {
+          chatEl.innerHTML = '<div class="lc-inbox-empty"><i class="fas fa-comments"></i><h3>Riwayat Chat</h3><p>Pilih sesi untuk melihat percakapan</p></div>';
+        }
+      }
+    } catch (e) {
+      console.error('[live-chat] delete session error:', e);
+    }
+  }
+
+  // ── Clear All History ──────────────────────────
+  async function clearAllHistory() {
+    if (!state || !state.session || !state.session.sb) return;
+    var ok = typeof showConfirm === 'function' ? await showConfirm('Hapus semua riwayat chat? Tindakan ini tidak bisa dibatalkan.', 'Hapus Semua Riwayat', 'delete') : confirm('Hapus semua riwayat chat?');
+    if (!ok) return;
+
+    try {
+      await state.session.sb.from('chat_messages').delete().in('session_id', ctx.closedSessions.map(function(s) { return s.session_id; }));
+      await state.session.sb.from('chat_sessions').delete().in('session_id', ctx.closedSessions.map(function(s) { return s.session_id; }));
+      ctx.closedSessions = [];
+      ctx.closedCount = 0;
+      ctx.activeSessionId = null;
+      updateTabBadges();
+      renderInboxSummary();
+      renderSessionList();
+      var chatEl = $('lcInboxChat');
+      if (chatEl) {
+        chatEl.innerHTML = '<div class="lc-inbox-empty"><i class="fas fa-check-circle" style="color:#15803D"></i><h3>Riwayat Dihapus</h3><p>Semua riwayat chat telah dihapus.</p></div>';
+      }
+      var cw = $('lcClearHistoryWrap');
+      if (cw) cw.style.display = 'none';
+    } catch (e) {
+      console.error('[live-chat] clear history error:', e);
+    }
+  }
+
   // ═══════════════════════════════════════════════════
   //  PUBLIC API
   // ═══════════════════════════════════════════════════
@@ -1110,6 +1389,12 @@
 
   window.__lcCloseSession = function (id) { closeSession(id); };
 
+  window.__lcSwitchTab = function (tab) { switchInboxTab(tab); };
+
+  window.__lcDeleteSession = function (id) { deleteSession(id); };
+
+  window.__lcClearHistory = function () { clearAllHistory(); };
+
 
   // ═══════════════════════════════════════════════════
   //  INIT
@@ -1119,6 +1404,7 @@
   function initAdminChat() {
     if (!state || !state.session || !state.session.currentUser) return;
     loadAdminSessions();
+    loadClosedCount();
     subscribeAdminRealtime();
   }
 
