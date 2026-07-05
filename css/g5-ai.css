@@ -192,6 +192,7 @@
   line-height: 1.6;
   word-break: break-word;
   animation: g5aiMsgIn 0.25s ease;
+  white-space: pre-line; 
 }
 
 @keyframes g5aiMsgIn {

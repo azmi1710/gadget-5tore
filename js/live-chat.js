@@ -491,6 +491,9 @@ function esc(s) {
           customer_name: ctx.customerName,
           customer_phone: ctx.customerPhone,
           mode: 'ai',
+          history: ctx.messages.slice(-6, -1).map(function(m) {
+            return (m.sender_type === 'customer' ? 'Customer' : 'AI') + ': ' + m.message;
+          }),
           context: {
             store_name: (state && state.db && state.db.settings && state.db.settings.store_name) || 'Gadget 5tore',
           }

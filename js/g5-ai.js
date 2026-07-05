@@ -300,11 +300,14 @@
     return state && state.admin && state.admin.panel === 'chat';
   }
 
-  function showFabIfAllowed() {
-    var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
-    if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
-  }
-
+function showFabIfAllowed() {
+  var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
+  if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
+  var lcFab = document.querySelector('#lcFab');
+  if (lcFab) lcFab.style.display = show ? 'none' : '';
+  var g5aFab = document.querySelector('#g5aFab');
+  if (g5aFab) g5aFab.style.display = 'none';
+}
   function watchLoginState() {
     var origDoLogin = window.doLogin;
     var origDoAccessLogin = window.doAccessLogin;
