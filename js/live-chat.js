@@ -21,6 +21,7 @@
     customerPhone: '',
     rtChannel: null,
     messages: [],
+    pendingMessage: null,
 
     // Admin
     activeSessionId: null,
@@ -34,12 +35,13 @@
   };
 
   // ── Helpers ─────────────────────────────────────
-function esc(s) {
-  if (typeof window.esc === 'function') return window.esc(s);
-  var d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML.replace(/\n/g, '<br>');
-}
+  function esc(s) {
+    if (typeof window.esc === 'function') return window.esc(s);
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
   function timeStr(date) {
     var d = date || new Date();
     return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -307,6 +309,18 @@ function esc(s) {
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
     };
+
+    // Pre-fill pending message dari tombol produk
+    if (ctx.pendingMessage) {
+      var pInp = $('lcInput');
+      if (pInp) {
+        pInp.value = ctx.pendingMessage;
+        pInp.style.height = 'auto';
+        pInp.style.height = Math.min(pInp.scrollHeight, 100) + 'px';
+        pInp.focus();
+      }
+      ctx.pendingMessage = null;
+    }
   }
 
   async function loadCustomerMessages() {
@@ -369,15 +383,9 @@ function esc(s) {
 
       var t = m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
-      // Unwrap double-JSON (safety net buat pesan lama di DB)
-      var msg = m.message || '';
-      if (typeof msg === 'string' && msg.charAt(0) === '{') {
-        try { var p = JSON.parse(msg); if (typeof p.reply === 'string') msg = p.reply; } catch (e) {}
-      }
-
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>')
+        + esc(m.message)
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
     }).join('');
@@ -478,6 +486,7 @@ function esc(s) {
   }
 
   async function forwardToWebhook(message, session) {
+    // Show typing
     var typingEl = $('lcTyping');
     if (typingEl) typingEl.classList.add('show');
 
@@ -491,9 +500,6 @@ function esc(s) {
           customer_name: ctx.customerName,
           customer_phone: ctx.customerPhone,
           mode: 'ai',
-          history: ctx.messages.slice(-6, -1).map(function(m) {
-            return (m.sender_type === 'customer' ? 'Customer' : 'AI') + ': ' + m.message;
-          }),
           context: {
             store_name: (state && state.db && state.db.settings && state.db.settings.store_name) || 'Gadget 5tore',
           }
@@ -504,49 +510,12 @@ function esc(s) {
       var shouldEscalate = false;
 
       if (res.ok) {
-        var text = await res.text();
-        var data;
-
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          console.error('[live-chat] invalid JSON response:', text);
-          reply = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
+        var data = await res.json();
+        reply = data.reply || data.message || data.output || data.text || data.response || '';
+        if (typeof reply !== 'string' || !reply) {
+          reply = JSON.stringify(data);
         }
-
-        if (data) {
-          // Ambil reply
-          var raw = data.reply;
-          if (typeof raw === 'undefined') raw = data.message || data.output || data.text || data.response;
-
-          if (typeof raw !== 'string') {
-            raw = JSON.stringify(raw);
-          }
-
-          // Unwrap double-JSON
-          reply = raw;
-          var depth = 0;
-          while (typeof reply === 'string' && reply.charAt(0) === '{' && depth < 3) {
-            try {
-              var inner = JSON.parse(reply);
-              if (typeof inner.reply === 'string') {
-                reply = inner.reply;
-                if (inner.escalate !== undefined) shouldEscalate = !!inner.escalate;
-                depth++;
-              } else {
-                break;
-              }
-            } catch (e) {
-              break;
-            }
-          }
-
-          if (!reply || typeof reply !== 'string') {
-            reply = JSON.stringify(data);
-          }
-
-          shouldEscalate = !!data.escalate;
-        }
+        shouldEscalate = !!data.escalate;
       } else {
         reply = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
       }
@@ -572,14 +541,16 @@ function esc(s) {
         renderCustomerMessages();
       }
 
-      // Auto-escalation
+      // ── Auto-escalation: switch session to 'connecting' ──
       if (shouldEscalate && state && state.session && state.session.sb) {
         console.log('[live-chat] AI escalated, switching session to connecting');
         await state.session.sb
           .from('chat_sessions')
           .update({ mode: 'connecting' })
           .eq('session_id', ctx.sessionId);
+        // Update local mode so subsequent messages don't go to AI
         if (state.session) state.session.mode = 'connecting';
+        // Update customer UI immediately
         updateCustomerChatStatus('connecting');
         ctx._prevMode = 'connecting';
       }
@@ -589,6 +560,7 @@ function esc(s) {
       if (typingEl) typingEl.classList.remove('show');
     }
   }
+
   // ── Customer Status & Input Control ─────────────
   function updateCustomerChatStatus(mode, adminName) {
     var statusText = $('lcHeaderStatusText');
@@ -1168,15 +1140,9 @@ function esc(s) {
 
       var t = m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
-      // Unwrap double-JSON (safety net buat pesan lama di DB)
-      var msg = m.message || '';
-      if (typeof msg === 'string' && msg.charAt(0) === '{') {
-        try { var p = JSON.parse(msg); if (typeof p.reply === 'string') msg = p.reply; } catch (e) {}
-      }
-
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>')
+        + esc(m.message)
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
     }).join('');
@@ -1441,6 +1407,22 @@ function esc(s) {
   window.__lcDeleteSession = function (id) { deleteSession(id); };
 
   window.__lcClearHistory = function () { clearAllHistory(); };
+
+  window.__lcOpenWithMessage = function (msg) {
+    ctx.pendingMessage = msg;
+    if (!ctx.isOpen) {
+      toggleCustomerPopup();
+    } else {
+      var inp = $('lcInput');
+      if (inp) {
+        inp.value = msg;
+        inp.style.height = 'auto';
+        inp.style.height = Math.min(inp.scrollHeight, 100) + 'px';
+        inp.focus();
+        ctx.pendingMessage = null;
+      }
+    }
+  };
 
 
   // ═══════════════════════════════════════════════════

@@ -17,7 +17,7 @@
 
   // ── Config ──────────────────────────────────────
   var N8N_G5_AI_URL = (typeof window.N8N_G5_AI_URL !== 'undefined') ? window.N8N_G5_AI_URL : '';
-  var AI_NAME = 'G5 AI';
+  var AI_NAME = 'G5 Assistant';
   var WELCOME_CHIPS = [
     'Stok produk apa yang kurang?',
     'Buat ringkasan penjualan',

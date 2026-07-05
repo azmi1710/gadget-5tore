@@ -323,7 +323,6 @@
   line-height: 1.6;
   word-break: break-word;
   animation: lcMsgIn 0.25s ease;
-  white-space: pre-line; 
 }
 
 @keyframes lcMsgIn {
@@ -1611,6 +1610,36 @@ body.dark .g5a-input::placeholder { color: rgba(255, 255, 255, 0.3); }
   .g5a-fab { bottom: 80px; right: 12px; width: 44px; height: 44px; font-size: 15px; }
   .g5a-popup { bottom: 72px; right: 0; left: 0; width: 100%; height: calc(100vh - 130px); max-height: none; border-radius: 18px 18px 0 0; }
 }
-.lc-msg {
-  white-space: pre-line;
+
+/* ===========================
+   PRODUCT CARD — TANYA PRODUK BTN
+   =========================== */
+.pcard-ask-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 0;
+  border: 1.5px solid var(--border, #e0ddd8);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.pcard-ask-btn:hover {
+  border-color: var(--accent, #D9503F);
+  color: var(--accent, #D9503F);
+  background: rgba(217, 80, 63, 0.05);
+}
+.pcard-ask-btn:active {
+  transform: scale(0.97);
+}
+.pcard-ask-btn i {
+  font-size: 12px;
 }

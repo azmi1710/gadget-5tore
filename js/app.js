@@ -1422,7 +1422,15 @@ function pcardHtml(p, idx = 0) {
       ? `<div class="img-indicator"><i class="fas fa-images" style="font-size:7px"></i> ${imgCount}</div>`
       : '';
   const delay = Math.min(Math.floor(idx / 4) * 80, 800);
-  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms"><div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${featBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i class="fas fa-eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i class="fas fa-share-alt"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}</div></div>`;
+  var askBtn = `<button class="pcard-ask-btn" onclick="event.stopPropagation();askProduct(${p.id})" title="Tanya tentang produk ini"><i class="fas fa-comment-dots"></i> Tanya Produk</button>`;
+  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms"><div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${featBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i class="fas fa-eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i class="fas fa-share-alt"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}${askBtn}</div></div>`;
+}
+function askProduct(id) {
+  var p = (state.db.products || []).find(function (x) { return x.id === id; });
+  if (!p) return;
+  var price = (p.discount_price > 0) ? p.discount_price : p.price;
+  var msg = 'Halo, saya tertarik dengan ' + p.name + ' (' + fmt(price) + '). Apakah stoknya tersedia?';
+  if (window.__lcOpenWithMessage) window.__lcOpenWithMessage(msg);
 }
 function renderCatalog() {
   renderBrandBar();
