@@ -734,6 +734,12 @@
     var sideNav = $('sideNav');
     if (!sideNav) return;
 
+    // Hanya admin & editor yang bisa akses live chat panel
+    if (state && state.session && state.session.currentUser) {
+      var role = state.session.currentUser.role;
+      if (role !== 'admin' && role !== 'editor') return;
+    }
+
     // Check if already in DOM (reliable check, not a flag)
     if (sideNav.querySelector('[data-lc-panel="chat"]')) return;
 
@@ -775,6 +781,13 @@
       if (g5Fab) g5Fab.style.display = isChatPanel ? 'none' : '';
 
       if (isChatPanel) {
+        // Blokir viewer dari mengakses chat panel
+        var curRole = state && state.session && state.session.currentUser && state.session.currentUser.role;
+        if (curRole !== 'admin' && curRole !== 'editor') {
+          state.admin.panel = '';
+          if (typeof renderDash === 'function') renderDash();
+          return;
+        }
         var el = $('dashContent');
         var ti = $('dashTitle');
         if (ti) ti.textContent = 'Live Chat';
@@ -1425,225 +1438,6 @@
   };
 
 
-  // ═══════════════════════════════════════════════════
-  //  G5 ASSISTANT (Dashboard AI — Informasi & Analisis Produk)
-  // ═══════════════════════════════════════════════════
-
-  var G5A_URL = window.G5_ASSISTANT_URL || '';
-  var g5aCtx = {
-    open: false,
-    messages: [],
-    sending: false,
-  };
-
-  var G5A_CHIPS = [
-    'Produk di bawah 5 juta?',
-    'Stok yang hampir habis?',
-    'HP termahal di toko?',
-    'Rekomendasi HP gaming',
-    'Total nilai semua stok?',
-    'Daftar semua kategori',
-  ];
-
-  function buildG5AssistantUI() {
-    if ($('g5aFab')) return;
-
-    // FAB
-    var fab = document.createElement('button');
-    fab.id = 'g5aFab';
-    fab.className = 'g5a-fab';
-    fab.title = 'G5 Assistant';
-    fab.innerHTML = '<i class="fas fa-robot"></i>';
-    fab.onclick = toggleG5A;
-    document.body.appendChild(fab);
-
-    // Only show in dashboard, hide in catalog
-    var dashView = $('view-dashboard');
-    if (dashView) {
-      var isDash = dashView.classList.contains('active');
-      fab.style.display = isDash ? '' : 'none';
-      new MutationObserver(function () {
-        fab.style.display = dashView.classList.contains('active') ? '' : 'none';
-        if (!dashView.classList.contains('active') && g5aCtx.open) toggleG5A();
-      }).observe(dashView, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    // Popup
-    var popup = document.createElement('div');
-    popup.id = 'g5aPopup';
-    popup.className = 'g5a-popup';
-    popup.innerHTML =
-      '<div class="g5a-head">'
-      + '<div class="g5a-head-icon"><i class="fas fa-robot"></i></div>'
-      + '<div class="g5a-head-info">'
-      + '<div class="g5a-head-name">G5 Assistant</div>'
-      + '<div class="g5a-head-desc">Informasi & Analisis Produk</div>'
-      + '</div>'
-      + '<button class="g5a-head-close" id="g5aClose" title="Tutup"><i class="fas fa-times"></i></button>'
-      + '</div>'
-      + '<div class="g5a-messages" id="g5aMessages"></div>'
-      + '<div class="g5a-chips" id="g5aChips"></div>'
-      + '<div class="g5a-input-area">'
-      + '<textarea class="g5a-input" id="g5aInput" placeholder="Tanya tentang produk toko..." rows="1"></textarea>'
-      + '<button class="g5a-send" id="g5aSend"><i class="fas fa-paper-plane"></i></button>'
-      + '</div>';
-    document.body.appendChild(popup);
-
-    $('g5aClose').onclick = toggleG5A;
-    $('g5aSend').onclick = sendG5A;
-    $('g5aInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendG5A(); }
-    });
-    // Auto-resize textarea
-    $('g5aInput').addEventListener('input', function () {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    });
-
-    renderG5AWelcome();
-    renderG5AChips();
-  }
-
-  function toggleG5A() {
-    g5aCtx.open = !g5aCtx.open;
-    var popup = $('g5aPopup');
-    if (popup) popup.classList.toggle('open', g5aCtx.open);
-  }
-
-  function renderG5AWelcome() {
-    var el = $('g5aMessages');
-    if (!el) return;
-    el.innerHTML =
-      '<div class="g5a-welcome">'
-      + '<div class="g5a-welcome-icon"><i class="fas fa-robot"></i></div>'
-      + '<h3>G5 Assistant</h3>'
-      + '<p>Tanyakan apa saja tentang produk, harga, stok,<br>dan analisis toko Gadget 5tore.</p>'
-      + '</div>';
-  }
-
-  function renderG5AChips() {
-    var el = $('g5aChips');
-    if (!el) return;
-    el.innerHTML = G5A_CHIPS.map(function (q) {
-      return '<button class="g5a-chip" onclick="window.__g5aChip(\'' + q.replace(/'/g, "\\'") + '\')">' + q + '</button>';
-    }).join('');
-  }
-
-  window.__g5aChip = function (text) {
-    var input = $('g5aInput');
-    if (input) { input.value = text; sendG5A(); }
-  };
-
-  function getProductContext() {
-    var products = (state && state.db && state.db.products) || [];
-    if (!products.length) return 'Tidak ada data produk tersedia.';
-
-    return products
-      .filter(function (p) { return p.active !== false; })
-      .map(function (p) {
-        var catName = '';
-        if (state && state.db && state.db.categories) {
-          var cat = state.db.categories.find(function (c) { return c.id === p.category_id; });
-          if (cat) catName = cat.name;
-        }
-        return p.name
-          + ' | Harga: Rp ' + (p.price || 0)
-          + ' | Stok: ' + (p.stock || 0)
-          + ' | Kategori: ' + (catName || '-')
-          + (p.description ? ' | ' + p.description.substring(0, 120) : '');
-      })
-      .join('\n');
-  }
-
-  function renderG5AMessages() {
-    var el = $('g5aMessages');
-    if (!el) return;
-    if (!g5aCtx.messages.length) { renderG5AWelcome(); return; }
-
-    el.innerHTML = g5aCtx.messages.map(function (m) {
-      var cls = m.role === 'user' ? 'g5a-msg--user' : 'g5a-msg--ai';
-      return '<div class="g5a-msg ' + cls + '">' + escapeHtml(m.text) + '</div>';
-    }).join('');
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function escapeHtml(str) {
-    var d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML.replace(/\n/g, '<br>');
-  }
-
-  async function sendG5A() {
-    if (g5aCtx.sending) return;
-    var input = $('g5aInput');
-    var text = (input ? input.value : '').trim();
-    if (!text) return;
-
-    if (!G5A_URL) {
-      g5aCtx.messages.push({ role: 'user', text: text });
-      g5aCtx.messages.push({ role: 'ai', text: 'G5 Assistant belum dikonfigurasi. Hubungi admin untuk mengatur webhook URL.' });
-      renderG5AMessages();
-      if (input) input.value = '';
-      return;
-    }
-
-    g5aCtx.sending = true;
-    g5aCtx.messages.push({ role: 'user', text: text });
-    renderG5AMessages();
-    if (input) { input.value = ''; input.style.height = 'auto'; }
-
-    // Show typing
-    var msgEl = $('g5aMessages');
-    var typingEl = document.createElement('div');
-    typingEl.className = 'g5a-typing';
-    typingEl.id = 'g5aTyping';
-    typingEl.innerHTML = '<div class="g5a-typing-dot"></div><div class="g5a-typing-dot"></div><div class="g5a-typing-dot"></div>';
-    msgEl.appendChild(typingEl);
-    msgEl.scrollTop = msgEl.scrollHeight;
-
-    // Hide chips after first message
-    var chipsEl = $('g5aChips');
-    if (chipsEl) chipsEl.style.display = 'none';
-
-    try {
-      var productData = getProductContext();
-      var storeName = (state && state.db && state.db.settings && state.db.settings.store_name) || 'Gadget 5tore';
-      console.log('[G5 Assistant] products length:', (state && state.db && state.db.products || []).length);
-      console.log('[G5 Assistant] productData preview:', productData.substring(0, 200));
-
-      var res = await fetch(G5A_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          store_name: storeName,
-          products: productData,
-        })
-      });
-
-      var reply = '';
-      if (res.ok) {
-        var data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          var item = data[0];
-          reply = item.reply || item.output || item.message || item.text || item.response || '';
-        }
-        if (!reply) reply = data.reply || data.message || data.output || data.text || data.response || '';
-        if (typeof reply !== 'string' || !reply) reply = JSON.stringify(data);
-      } else {
-        reply = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
-      }
-
-      g5aCtx.messages.push({ role: 'ai', text: reply });
-    } catch (e) {
-      console.error('[G5 Assistant] error:', e);
-      g5aCtx.messages.push({ role: 'ai', text: 'Maaf, terjadi kesalahan koneksi.' });
-    }
-
-    g5aCtx.sending = false;
-    renderG5AMessages();
-  }
-
 
   // ═══════════════════════════════════════════════════
   //  INIT
@@ -1678,10 +1472,6 @@
     ctx.inboxObserver = obs;
   }
 
-  function initG5Assistant() {
-    buildG5AssistantUI();
-  }
-
   function init() {
     buildCustomerUI();
     hookRenderDash();
@@ -1694,7 +1484,6 @@
         ensureInboxStable();
       }
       initAdminChat();
-      initG5Assistant();
     }
 
     // Watch for login → inject sidebar + init admin chat
@@ -1702,22 +1491,55 @@
     var origDoAccessLogin = window.doAccessLogin;
     var origDoVisitorLogin = window.doVisitorLogin;
 
+    // Helper: hide customer FAB saat user login ke dashboard
+    function hideCustomerFab() {
+      if (ctx.fabEl && state && state.session && state.session.currentUser) {
+        ctx.fabEl.style.display = 'none';
+        if (ctx.isOpen) closeCustomerPopup();
+      }
+    }
+
+    // Helper: tampilkan customer FAB saat logout (kembali jadi pengunjung)
+    function showCustomerFab() {
+      if (ctx.fabEl) {
+        var catalogView = $('view-catalog');
+        var isCatalog = catalogView && catalogView.classList.contains('active');
+        ctx.fabEl.style.display = isCatalog ? '' : 'none';
+      }
+    }
+
     if (origDoLogin) {
       window.doLogin = function () {
         origDoLogin.apply(this, arguments);
-        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); initG5Assistant(); }, 200);
+        hideCustomerFab();
+        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); }, 200);
       };
     }
     if (origDoAccessLogin) {
       window.doAccessLogin = function () {
         origDoAccessLogin.apply(this, arguments);
-        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); initG5Assistant(); }, 200);
+        hideCustomerFab();
+        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); }, 200);
       };
     }
     if (origDoVisitorLogin) {
       window.doVisitorLogin = function () {
         origDoVisitorLogin.apply(this, arguments);
-        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); initG5Assistant(); }, 200);
+        hideCustomerFab();
+        setTimeout(function () { injectSidebarItem(); ensureInboxStable(); initAdminChat(); }, 200);
+      };
+    }
+
+    // Hook logout → kembalikan FAB customer kalau di katalog
+    var origDoLogout = window.doLogout;
+    if (origDoLogout) {
+      window.doLogout = function () {
+        if (ctx.isOpen) closeCustomerPopup();
+        origDoLogout.apply(this, arguments);
+        setTimeout(function () {
+          // Setelah logout, currentUser sudah hilang, tampilkan FAB lagi
+          showCustomerFab();
+        }, 300);
       };
     }
 

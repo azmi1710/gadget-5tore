@@ -223,7 +223,21 @@
   function injectVisitorButton() {
     const loginBody = document.querySelector('#loginModal .login-body');
     if (!loginBody) return;
-    if ($('loginVisitorBtn')) return; // sudah ada
+
+    const existingBtn = $('loginVisitorBtn');
+    if (existingBtn) {
+      // Tombol sudah ada di HTML tapi gak punya onclick → tambahin handler
+      // Pakai flag biar gak dobel pas MutationObserver trigger ulang
+      if (!existingBtn.getAttribute('onclick') && !existingBtn._lcVisitorBound) {
+        existingBtn._lcVisitorBound = true;
+        existingBtn.addEventListener('click', function () {
+          if (typeof window.doVisitorLogin === 'function') {
+            window.doVisitorLogin();
+          }
+        });
+      }
+      return;
+    }
 
     const doLoginBtn = $('doLoginBtn');
     if (!doLoginBtn) return;
@@ -286,6 +300,12 @@
     buildAccessModal();
     bindLogoTrigger();
     injectVisitorButton();
+    // Hapus tombol viewer dari access modal (viewer hanya via login modal)
+    var accessViewerBtn = document.querySelector('#accessModal .login-visitor-btn');
+    if (accessViewerBtn) {
+      var wrap = accessViewerBtn.closest('.login-visitor-wrap');
+      if (wrap) wrap.remove(); else accessViewerBtn.remove();
+    }
     console.log('[hidden-access] ready');
   }
 

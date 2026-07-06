@@ -58,6 +58,7 @@
 
   function recalcAllNames() {
     // Hitung ulang nama untuk semua user di channel yang sama
+    // User dari DB (isDBUser) pakai nama asli, lainnya auto-number
     const byRole = {};
     for (const [key, val] of Object.entries(ctx.presences)) {
       if (!byRole[val.role]) byRole[val.role] = [];
@@ -65,9 +66,17 @@
     }
     for (const role of Object.keys(byRole)) {
       byRole[role].sort((a, b) => a.joinedAt - b.joinedAt);
-      byRole[role].forEach((p, i) => {
-        ctx.presences[p._key].name = roleLabel(role) + ' ' + (i + 1);
-      });
+      let autoNum = 1;
+      for (const p of byRole[role]) {
+        if (p.isDBUser && p.name) {
+          // Login via username/password dari DB → pakai nama asli
+          ctx.presences[p._key].name = p.name;
+        } else {
+          // Login via trigger button / viewer → auto-number
+          ctx.presences[p._key].name = roleLabel(role) + ' ' + autoNum;
+          autoNum++;
+        }
+      }
     }
   }
 
@@ -156,7 +165,15 @@
   // ── Supabase Presence ──────────────────────────────
   function joinPresence() {
     if (!state.session.sb || !state.session.currentUser) return;
-    if (ctx.channel) return; // sudah join
+
+    // Force cleanup channel lama kalau masih nyangkut
+    if (ctx.channel) {
+      try { ctx.channel.untrack(); } catch (e) {}
+      try { ctx.channel.unsubscribe(); } catch (e) {}
+      ctx.channel = null;
+    }
+    ctx.cleanupDone = false;
+    ctx.active = false;
 
     var role = state.session.currentUser.role;
     if (!role) return;
@@ -209,9 +226,12 @@
         .subscribe(async function (status, err) {
           if (status === 'SUBSCRIBED') {
             try {
+              var curUser = state.session.currentUser || {};
               await ctx.channel.track({
                 role: ctx.myRole,
+                name: curUser.display_name || curUser.username || '',
                 joinedAt: Date.now(),
+                isDBUser: !!(curUser._isDBLogin),
               });
             } catch (e) {
               console.error('[presence] track error:', e);
@@ -231,17 +251,19 @@
     ctx.cleanupDone = true;
     ctx.active = false;
 
-    if (ctx.channel) {
-      try {
-        await ctx.channel.untrack();
-        await ctx.channel.unsubscribe();
-      } catch (e) { /* ignore */ }
-      ctx.channel = null;
-    }
+    // Set channel null SEBELUM await — biar joinPresence() gak ke-block
+    var oldChannel = ctx.channel;
+    ctx.channel = null;
     ctx.presences = {};
     ctx.myName = '';
     removePopover();
     renderIndicator();
+
+    // Cleanup di background (gak perlu nunggu)
+    if (oldChannel) {
+      try { await oldChannel.untrack(); } catch (e) { /* ignore */ }
+      try { await oldChannel.unsubscribe(); } catch (e) { /* ignore */ }
+    }
   }
 
   // ── Watch View Switch ──────────────────────────────
@@ -254,7 +276,7 @@
       var isDash = dashView.classList.contains('active');
       var isLoggedIn = !!state.session.currentUser;
 
-      if (isDash && isLoggedIn && !ctx.active && !ctx.cleanupDone) {
+      if (isDash && isLoggedIn && !ctx.active) {
         // Rejoin karena sebelumnya leave (switch ke katalog)
         ctx.cleanupDone = false;
         joinPresence();

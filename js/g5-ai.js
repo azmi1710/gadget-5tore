@@ -17,7 +17,7 @@
 
   // ── Config ──────────────────────────────────────
   var N8N_G5_AI_URL = (typeof window.N8N_G5_AI_URL !== 'undefined') ? window.N8N_G5_AI_URL : '';
-  var AI_NAME = 'G5 Assistant';
+  var AI_NAME = 'G5 AI';
   var WELCOME_CHIPS = [
     'Stok produk apa yang kurang?',
     'Buat ringkasan penjualan',
@@ -53,7 +53,8 @@
 
   function isAllowedRole() {
     if (!state || !state.session || !state.session.currentUser) return false;
-    return true; // semua role bisa akses
+    var role = state.session.currentUser.role;
+    return role === 'admin' || role === 'editor';
   }
 
   // ── Build DOM ───────────────────────────────────
@@ -303,8 +304,12 @@
 function showFabIfAllowed() {
   var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
   if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
+  // Jangan tampilkan customer FAB jika user sudah login ke dashboard
+  var isLoggedIn = state && state.session && state.session.currentUser;
   var lcFab = document.querySelector('#lcFab');
-  if (lcFab) lcFab.style.display = show ? 'none' : '';
+  if (lcFab) {
+    lcFab.style.display = (isLoggedIn || show) ? 'none' : '';
+  }
   var g5aFab = document.querySelector('#g5aFab');
   if (g5aFab) g5aFab.style.display = 'none';
 }

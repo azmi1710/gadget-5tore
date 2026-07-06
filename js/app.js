@@ -2435,10 +2435,12 @@ async function doLogin() {
       .eq('active', true)
       .single();
     if (error || !data) { document.getElementById('loginErr').classList.add('show'); return; }
+    data._isDBLogin = true;
     state.session.currentUser = data;
   } else {
     const f = state.db.users.find((x) => x.username === u && x.password === p && x.active);
     if (!f) { document.getElementById('loginErr').classList.add('show'); return; }
+    f._isDBLogin = true;
     state.session.currentUser = f;
   }
   closeLogin();
