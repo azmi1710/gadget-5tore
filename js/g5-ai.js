@@ -163,13 +163,16 @@
     if (!ctx.messages.length) { renderWelcome(); return; }
 
     var html = ctx.messages.map(function (m) {
-      var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
-      if (m.role === 'system') cls = 'g5ai-msg--system';
-      return '<div class="g5ai-msg ' + cls + '">'
-        + esc(m.text)
-        + '<span class="g5ai-msg-time">' + m.time + '</span>'
-        + '</div>';
-    }).join('');
+  var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
+  if (m.role === 'system') cls = 'g5ai-msg--system';
+  var content = m.role === 'bot' && typeof marked !== 'undefined'
+    ? marked.parse(m.text)
+    : esc(m.text);
+  return '<div class="g5ai-msg ' + cls + '">'
+    + content
+    + '<span class="g5ai-msg-time">' + m.time + '</span>'
+    + '</div>';
+}).join('');
 
     // Add typing indicator placeholder
     html += '<div class="g5ai-typing" id="g5aiTyping"><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div></div>';
