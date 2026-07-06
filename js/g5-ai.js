@@ -32,6 +32,7 @@
     fabEl: null,
     popupEl: null,
     observer: null,
+    sessionId: null,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -119,6 +120,11 @@
     ctx.popupEl.style.display = 'flex';
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
+
+    // Buat session_id konsisten sekali per sesi chat
+    if (!ctx.sessionId) {
+      ctx.sessionId = 'g5ai_' + Date.now();
+    }
 
     if (!ctx.messages.length) {
       renderWelcome();
@@ -215,13 +221,21 @@
     showTyping(true);
     $('g5aiSendBtn').disabled = true;
 
+    // Build history dari pesan sebelumnya (skip system messages)
+      var history = ctx.messages
+        .filter(function (m) { return m.role === 'user' || m.role === 'bot'; })
+        .map(function (m) {
+          return (m.role === 'user' ? 'Customer: ' : 'AI: ') + m.text;
+        });
+
     try {
       var res = await fetch(N8N_G5_AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: msg,
-          session_id: 'g5ai_' + Date.now(),
+          session_id: ctx.sessionId,
+          history: history,
           context: {
             store_name: (state && state.db && state.db.settings && state.db.settings.store_name) || 'Gadget 5tore',
             role: (state && state.session && state.session.currentUser && state.session.currentUser.role) || 'viewer',
@@ -254,6 +268,18 @@
         reply = JSON.stringify(data);
       }
 
+      // Cleanup: kalau reply masih berisi JSON mentah di awal, extract reply-nya aja
+      if (reply && typeof reply === 'string' && reply.trim().startsWith('{')) {
+        try {
+          var parsed = JSON.parse(reply);
+          if (parsed.reply) reply = parsed.reply;
+        } catch (e) { /* bukan JSON valid, biarin apa adanya */ }
+      }
+      // Cleanup: kalau reply mengandung blok JSON di awal sebelum teks asli
+      if (reply && typeof reply === 'string') {
+        reply = reply.replace(/^\s*\{[\s\S]*?\}\s*\n*/, '').trim();
+      }
+
       ctx.messages.push({ role: 'bot', text: reply, time: timeStr() });
       renderMessages();
     } catch (e) {
@@ -274,6 +300,7 @@
 
   function clearChat() {
     ctx.messages = [];
+    ctx.sessionId = null;  // reset session, chat baru = konteks baru
     renderWelcome();
   }
 
@@ -304,12 +331,6 @@
 function showFabIfAllowed() {
   var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
   if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
-  // Jangan tampilkan customer FAB jika user sudah login ke dashboard
-  var isLoggedIn = state && state.session && state.session.currentUser;
-  var lcFab = document.querySelector('#lcFab');
-  if (lcFab) {
-    lcFab.style.display = (isLoggedIn || show) ? 'none' : '';
-  }
   var g5aFab = document.querySelector('#g5aFab');
   if (g5aFab) g5aFab.style.display = 'none';
 }

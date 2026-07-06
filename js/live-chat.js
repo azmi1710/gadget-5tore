@@ -152,17 +152,36 @@
     document.body.appendChild(popup);
     ctx.popupEl = popup;
 
-    // Watch catalog view to show/hide FAB
+    // Watch catalog/dashboard view to show/hide FAB
     var catalogView = $('view-catalog');
+    var dashView = $('view-dashboard');
     if (catalogView) {
-      var obs = new MutationObserver(function () {
-        var isCatalog = catalogView.classList.contains('active');
-        fab.style.display = isCatalog ? '' : 'none';
-        if (!isCatalog && ctx.isOpen) closeCustomerPopup();
+      function shouldShowFab() {
+        // Jika sedang di dashboard, jangan tampilkan FAB customer
+        if (dashView && dashView.classList.contains('active')) return false;
+        return catalogView.classList.contains('active');
+      }
+
+      // Watch catalog view
+      var obs1 = new MutationObserver(function () {
+        var show = shouldShowFab();
+        fab.style.display = show ? '' : 'none';
+        if (!show && ctx.isOpen) closeCustomerPopup();
       });
-      obs.observe(catalogView, { attributes: true, attributeFilter: ['class'] });
+      obs1.observe(catalogView, { attributes: true, attributeFilter: ['class'] });
+
+      // Watch dashboard view juga (biar pas pindah dari dashboard ke katalog, FAB muncul)
+      if (dashView) {
+        var obs2 = new MutationObserver(function () {
+          var show = shouldShowFab();
+          fab.style.display = show ? '' : 'none';
+          if (!show && ctx.isOpen) closeCustomerPopup();
+        });
+        obs2.observe(dashView, { attributes: true, attributeFilter: ['class'] });
+      }
+
       // Initial
-      fab.style.display = catalogView.classList.contains('active') ? '' : 'none';
+      fab.style.display = shouldShowFab() ? '' : 'none';
     }
   }
 
@@ -295,7 +314,6 @@
       + '<button class="lc-header-close" onclick="window.__lcToggle()"><i class="fas fa-times"></i></button>'
       + '</div>'
       + '<div class="lc-messages" id="lcMessages"></div>'
-      + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>'
       + '<div class="lc-input-area">'
       + '<textarea class="lc-input" id="lcInput" placeholder="Ketik pesan..." rows="1"></textarea>'
       + '<button class="lc-send" id="lcSendBtn" title="Kirim"><i class="fas fa-paper-plane"></i></button>'
@@ -383,12 +401,22 @@
 
       var t = m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
+      // Cleanup JSON fragment dari pesan (termasuk pesan lama dari DB)
+      var cleanMsg = m.message || '';
+      if (typeof cleanMsg === 'string') {
+        cleanMsg = cleanMsg.replace(/,\s*"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '');
+        cleanMsg = cleanMsg.replace(/"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '');
+        cleanMsg = cleanMsg.replace(/^\s*\{[^}]*"escalate"\s*:\s*(true|false)\s*\}\s*/, '');
+        cleanMsg = cleanMsg.trim();
+      }
+
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + esc(m.message)
+        + esc(cleanMsg)
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
-    }).join('');
+    }).join('')
+    + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
 
     el.scrollTop = el.scrollHeight;
   }
@@ -488,7 +516,11 @@
   async function forwardToWebhook(message, session) {
     // Show typing
     var typingEl = $('lcTyping');
-    if (typingEl) typingEl.classList.add('show');
+    if (typingEl) {
+      typingEl.classList.add('show');
+      var msgEl = $('lcMessages');
+      if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+    }
 
     try {
       var res = await fetch(N8N_LIVE_CHAT_URL, {
@@ -516,6 +548,24 @@
           reply = JSON.stringify(data);
         }
         shouldEscalate = !!data.escalate;
+
+        // Cleanup JSON mentah dari response
+        // 1. Kalau reply murni JSON di awal, extract reply-nya
+        if (reply && typeof reply === 'string' && reply.trim().startsWith('{')) {
+          try {
+            var parsed = JSON.parse(reply);
+            if (typeof parsed.reply === 'string') reply = parsed.reply;
+          } catch (e) { /* bukan JSON valid */ }
+        }
+        // 2. Strip JSON blok yang nempel di awal
+        if (reply && typeof reply === 'string') {
+          reply = reply.replace(/^\s*\{[^}]*"escalate"\s*:\s*(true|false)\s*\}\s*/, '').trim();
+        }
+        // 3. Strip fragment JSON yang nempel di akhir (misal: ", "escalate": false})
+        if (reply && typeof reply === 'string') {
+          reply = reply.replace(/,\s*"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '').trim();
+          reply = reply.replace(/"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '').trim();
+        }
       } else {
         reply = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
       }
@@ -573,13 +623,13 @@
     if (mode === 'ai') {
       statusText.textContent = 'Terhubung';
       if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
-      if (modeBadge) { modeBadge.textContent = '\uD83E\uDD16 AI'; modeBadge.className = 'lc-mode-badge lc-mode-badge--ai'; }
+      if (modeBadge) { modeBadge.textContent = '\uD83E\uDD16 AI'; modeBadge.className = 'lc-mode-badge lc-mode-badge--ai'; modeBadge.style.display = ''; }
       if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
       if (sendBtn) sendBtn.disabled = false;
     } else if (mode === 'connecting') {
       statusText.textContent = 'Menunggu admin...';
       if (statusDot) { statusDot.classList.remove('offline'); statusDot.classList.add('connecting'); }
-      if (modeBadge) { modeBadge.textContent = '\u23F3 Menunggu'; modeBadge.className = 'lc-mode-badge lc-mode-badge--connecting'; }
+      if (modeBadge) { modeBadge.style.display = 'none'; }
       if (input) { input.disabled = true; input.placeholder = 'Menunggu admin menghubungi Anda...'; }
       if (sendBtn) sendBtn.disabled = true;
       ctx.messages.push({
@@ -593,7 +643,7 @@
     } else if (mode === 'admin') {
       statusText.textContent = adminName ? 'Admin: ' + adminName : 'Admin sedang melayani';
       if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
-      if (modeBadge) { modeBadge.textContent = '\uD83D\uDC64 Admin'; modeBadge.className = 'lc-mode-badge lc-mode-badge--admin'; }
+      if (modeBadge) { modeBadge.style.display = 'none'; }
       if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
       if (sendBtn) sendBtn.disabled = false;
       ctx.messages.push({
@@ -794,6 +844,24 @@
         if (el) renderAdminInbox(el);
       }
     };
+  }
+
+  // ── Notif Sound ──────────────────────────────
+  function playNotifSound() {
+    try {
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ac.currentTime);
+      osc.frequency.setValueAtTime(1100, ac.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.4);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime + 0.4);
+    } catch (e) { /* ignore */ }
   }
 
   // ── Admin Inbox ────────────────────────────────
@@ -1153,9 +1221,18 @@
 
       var t = m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
+      // Cleanup JSON fragment dari pesan lama di DB
+      var cleanMsg = m.message || '';
+      if (typeof cleanMsg === 'string') {
+        cleanMsg = cleanMsg.replace(/,\s*"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '');
+        cleanMsg = cleanMsg.replace(/"\s*escalate\s*"\s*:\s*(true|false)\s*\}\s*$/, '');
+        cleanMsg = cleanMsg.replace(/^\s*\{[^}]*"escalate"\s*:\s*(true|false)\s*\}\s*/, '');
+        cleanMsg = cleanMsg.trim();
+      }
+
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + esc(m.message)
+        + esc(cleanMsg)
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
     }).join('');
@@ -1311,6 +1388,15 @@
       }, function (payload) {
         var m = payload.new;
         if (!m) return;
+
+        // Notif bunyi hanya untuk customer message, dan hanya admin/editor di dashboard
+        if (m.sender_type === 'customer') {
+          var curRole = state && state.session && state.session.currentUser && state.session.currentUser.role;
+          var isDashboard = $('view-dashboard') && $('view-dashboard').classList.contains('active');
+          if ((curRole === 'admin' || curRole === 'editor') && isDashboard) {
+            playNotifSound();
+          }
+        }
 
         // If we're viewing this session, add the message
         if (ctx.activeSessionId === m.session_id) {
@@ -1491,15 +1577,15 @@
     var origDoAccessLogin = window.doAccessLogin;
     var origDoVisitorLogin = window.doVisitorLogin;
 
-    // Helper: hide customer FAB saat user login ke dashboard
+    // Helper: hide customer FAB saat masuk dashboard
     function hideCustomerFab() {
-      if (ctx.fabEl && state && state.session && state.session.currentUser) {
+      if (ctx.fabEl && $('view-dashboard') && $('view-dashboard').classList.contains('active')) {
         ctx.fabEl.style.display = 'none';
         if (ctx.isOpen) closeCustomerPopup();
       }
     }
 
-    // Helper: tampilkan customer FAB saat logout (kembali jadi pengunjung)
+    // Helper: tampilkan customer FAB saat kembali ke katalog
     function showCustomerFab() {
       if (ctx.fabEl) {
         var catalogView = $('view-catalog');
