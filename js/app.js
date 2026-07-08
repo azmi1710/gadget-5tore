@@ -167,9 +167,13 @@ function applySettings() {
     }
     link.href = s.favicon_url;
   }
-  if (s.hero_headline) { const h = document.querySelector('.hero-headline span'); if (h) h.textContent = s.hero_headline; }
+  if (s.hero_headline) { const h = document.querySelector('.hero-headline'); if (h) h.innerHTML = '<span>' + esc(s.hero_headline) + '</span>'; }
   if (s.hero_subline) { const p = document.querySelector('.hero-subline'); if (p) p.textContent = s.hero_subline; }
-  if (s.footer_text) { const ft = document.querySelector('.footer-bottom span'); if (ft) ft.textContent = s.footer_text; }
+  if (s.hero_badge) { const hb = document.querySelector('.hero-badge-text'); if (hb) hb.textContent = s.hero_badge; }
+  if (s.store_name) { const fn = document.querySelector('.footer-store-name'); if (fn) fn.textContent = s.store_name; }
+  if (s.footer_text) { const ft = document.querySelector('.footer-store-name'); if (ft) ft.textContent = s.footer_text; }
+  if (s.footer_year) { const fy = document.querySelector('.footer-year'); if (fy) fy.textContent = s.footer_year; }
+  if (s.tagline) { const tg = document.querySelector('.footer-tagline'); if (tg) tg.textContent = s.tagline; }
 }
 function initSelectedBranch() {
   if (!state.db.branches.length) { state.session.selectedBranch = null; return; }
@@ -1074,7 +1078,7 @@ function showView(v) {
   document.querySelectorAll('.view').forEach((e) => e.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
   document.getElementById('pubNav').style.display = v === 'catalog' ? 'flex' : 'none';
-  if (v === 'catalog') renderCatalog();
+  if (v === 'catalog') { applySettings(); renderCatalog(); }
 }
 function goToCatalog() { showView('catalog'); updateNavAuth(); }
 function updateNavAuth() {
@@ -2547,11 +2551,13 @@ function renderSettingsPanel(el) {
     </div>
   `;
   const heroContent = `
+    <div class="form-group"><label class="form-label">Hero Badge</label><input class="form-input" id="setHeroBadge" value="${esc(s.hero_badge || '')}" placeholder="Gadget Terpercaya Sejak 2025"></div>
     <div class="form-group"><label class="form-label">Hero Headline</label><input class="form-input" id="setHeroHeadline" value="${esc(s.hero_headline || '')}" placeholder="Temukan Gadget Impianmu"></div>
     <div class="form-group"><label class="form-label">Hero Subline</label><textarea class="form-input" id="setHeroSubline" rows="2" placeholder="Deskripsi singkat di bawah headline">${esc(s.hero_subline || '')}</textarea></div>
   `;
   const kontenContent = `
     <div class="form-group"><label class="form-label">Jangka Waktu Terbaru (hari)</label><input type="number" class="form-input" id="setNewestDays" value="${s.newest_days || 7}" min="1" max="365" placeholder="7"><span style="font-size:10px;color:var(--muted);margin-top:3px;display:block">Produk yang ditambahkan dalam X hari terakhir muncul di tab Terbaru</span></div>
+    <div class="form-group"><label class="form-label">Tahun Footer</label><input class="form-input" id="setFooterYear" value="${esc(s.footer_year || '')}" placeholder="2025"></div>
     <div class="form-group"><label class="form-label">Footer Text</label><input class="form-input" id="setFooterText" value="${esc(s.footer_text || '')}" placeholder="© 2025 Gadget 5tore"></div>
   `;
   const seoContent = `
@@ -2579,22 +2585,24 @@ async function saveSettings() {
     logo_url: document.getElementById('setLogoUrl').value.trim(),
     favicon_url: document.getElementById('setFaviconUrl').value.trim(),
     accent_color: document.getElementById('setAccentColor').value,
+    hero_badge: document.getElementById('setHeroBadge').value.trim(),
     hero_headline: document.getElementById('setHeroHeadline').value.trim(),
     hero_subline: document.getElementById('setHeroSubline').value.trim(),
+    footer_year: document.getElementById('setFooterYear').value.trim(),
     footer_text: document.getElementById('setFooterText').value.trim(),
     newest_days: parseInt(document.getElementById('setNewestDays').value) || 7,
     meta_title: document.getElementById('setMetaTitle').value.trim(),
     meta_description: document.getElementById('setMetaDesc').value.trim(),
   };
   if (!s.store_name) { toast('Nama toko wajib diisi', 'error'); return; }
-  if (state.session.dbOk && state.session.sb) {
+    if (state.session.dbOk && state.session.sb) {
     const ok = await sbUpdateSettings(s);
     if (!ok) return;
-  } else {
-    Object.assign(state.db.settings, s);
   }
+  Object.assign(state.db.settings, s);
   applySettings();
   renderBranchInfo();
+  renderCatalog();
   toast('Pengaturan tersimpan');
   logAct('Edit Pengaturan', 'Mengubah pengaturan toko', 'edit');
   renderDash();
