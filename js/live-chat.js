@@ -342,11 +342,23 @@
   }
 
   async function loadCustomerMessages() {
-    // Set initial mode tracking
-    if (ctx._prevMode == null && state && state.session) {
-      ctx._prevMode = state.session.mode || 'ai';
-    }
     if (!ctx.sessionId || !state || !state.session || !state.session.sb) return;
+
+    // Fetch current session mode from DB to sync UI
+    var currentMode = 'ai';
+    var currentHandledBy = '';
+    try {
+      var sess = await getSessionFromDB(ctx.sessionId);
+      if (sess) {
+        currentMode = sess.mode || 'ai';
+        currentHandledBy = sess.handled_by || '';
+      }
+    } catch (e) { /* ignore */ }
+
+    // Set initial mode tracking
+    if (ctx._prevMode == null) {
+      ctx._prevMode = currentMode;
+    }
 
     try {
       var { data } = await state.session.sb
@@ -366,6 +378,15 @@
       });
 
       renderCustomerMessages();
+
+      // Sync header UI with actual session mode (handles page reload mid-escalation)
+      // silent=true so we don't push duplicate system messages
+      if (currentMode === 'connecting') {
+        updateCustomerChatStatus('connecting', null, true);
+      } else if (currentMode === 'admin') {
+        updateCustomerChatStatus('admin', currentHandledBy || 'Admin', true);
+      }
+      // mode === 'ai' is the default UI, no update needed
 
       // Mark customer messages as read
       if (state.session.dbOk) {
@@ -599,17 +620,29 @@
       }
 
       // ── Auto-escalation: switch session to 'connecting' ──
-      if (shouldEscalate && state && state.session && state.session.sb) {
+      if (shouldEscalate) {
         console.log('[live-chat] AI escalated, switching session to connecting');
-        await state.session.sb
-          .from('chat_sessions')
-          .update({ mode: 'connecting' })
-          .eq('session_id', ctx.sessionId);
-        // Update local mode so subsequent messages don't go to AI
-        if (state.session) state.session.mode = 'connecting';
-        // Update customer UI immediately
+        // Update UI dulu biar customer langsung lihat
         updateCustomerChatStatus('connecting');
         ctx._prevMode = 'connecting';
+        // Lalu update DB
+        if (ctx.sessionId && state && state.session && state.session.sb) {
+          try {
+            var { error: escErr } = await state.session.sb
+              .from('chat_sessions')
+              .update({ mode: 'connecting' })
+              .eq('session_id', ctx.sessionId);
+            if (escErr) console.error('[live-chat] escalation DB update error:', escErr);
+            else console.log('[live-chat] escalation DB updated to connecting');
+          } catch (escEx) {
+            console.error('[live-chat] escalation DB update exception:', escEx);
+          }
+        } else {
+          console.warn('[live-chat] escalation skipped — no sb or sessionId', {
+            hasSb: !!(state && state.session && state.session.sb),
+            sessionId: ctx.sessionId
+          });
+        }
       }
     } catch (e) {
       console.error('[live-chat] webhook error:', e);
@@ -619,7 +652,8 @@
   }
 
   // ── Customer Status & Input Control ─────────────
-  function updateCustomerChatStatus(mode, adminName) {
+  // silent = true → hanya update header UI, jangan push system message (untuk page reload)
+  function updateCustomerChatStatus(mode, adminName, silent) {
     var statusText = $('lcHeaderStatusText');
     var statusDot = $('lcStatusDot');
     var modeBadge = $('lcModeBadge');
@@ -639,14 +673,16 @@
       if (modeBadge) { modeBadge.style.display = 'none'; }
       if (input) { input.disabled = true; input.placeholder = 'Menunggu admin menghubungi Anda...'; }
       if (sendBtn) sendBtn.disabled = true;
-      ctx.messages.push({
-        id: Date.now(),
-        sender_type: 'system',
-        sender_name: '',
-        message: 'Pertanyaan Anda memerlukan bantuan admin. Mohon tunggu sebentar...',
-        created_at: new Date().toISOString(),
-      });
-      renderCustomerMessages();
+      if (!silent) {
+        ctx.messages.push({
+          id: Date.now(),
+          sender_type: 'system',
+          sender_name: '',
+          message: 'Pertanyaan Anda memerlukan bantuan admin. Mohon tunggu sebentar...',
+          created_at: new Date().toISOString(),
+        });
+        renderCustomerMessages();
+      }
     } else if (mode === 'admin') {
       statusText.textContent = 'Terhubung';
       if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
@@ -657,14 +693,16 @@
       }
       if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
       if (sendBtn) sendBtn.disabled = false;
-      ctx.messages.push({
-        id: Date.now() + 1,
-        sender_type: 'system',
-        sender_name: '',
-        message: adminName ? (adminName + ' telah terhubung.') : 'Admin telah terhubung.',
-        created_at: new Date().toISOString(),
-      });
-      renderCustomerMessages();
+      if (!silent) {
+        ctx.messages.push({
+          id: Date.now() + 1,
+          sender_type: 'system',
+          sender_name: '',
+          message: adminName ? (adminName + ' telah terhubung.') : 'Admin telah terhubung.',
+          created_at: new Date().toISOString(),
+        });
+        renderCustomerMessages();
+      }
     }
   }
 
