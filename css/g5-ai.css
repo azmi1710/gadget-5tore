@@ -192,7 +192,7 @@
   line-height: 1.6;
   word-break: break-word;
   animation: g5aiMsgIn 0.25s ease;
-  white-space: pre-line; 
+  white-space: normal; 
 }
 
 @keyframes g5aiMsgIn {
@@ -478,6 +478,108 @@ body.dark .g5ai-welcome-chip:hover {
 body.dark .g5ai-fab-badge { border-color: #1a1a2e; }
 
 /* ===========================
+   MARKDOWN STYLING — Bot Messages
+   =========================== */
+.g5ai-msg--bot p {
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+}
+.g5ai-msg--bot p:last-child {
+  margin-bottom: 0;
+}
+
+.g5ai-msg--bot ul,
+.g5ai-msg--bot ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.g5ai-msg--bot li {
+  margin-bottom: 3px;
+  line-height: 1.5;
+}
+
+.g5ai-msg--bot table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.g5ai-msg--bot th,
+.g5ai-msg--bot td {
+  border: 1px solid var(--border, #DCD5C3);
+  padding: 5px 10px;
+  text-align: left;
+}
+.g5ai-msg--bot th {
+  font-weight: 700;
+  background: var(--bg, #F4F1EA);
+}
+.g5ai-msg--bot tr:nth-child(even) {
+  background: rgba(0,0,0,0.02);
+}
+
+body.dark .g5ai-msg--bot th {
+  background: rgba(255,255,255,0.06);
+}
+body.dark .g5ai-msg--bot th,
+body.dark .g5ai-msg--bot td {
+  border-color: rgba(255,255,255,0.1);
+}
+
+.g5ai-msg--bot strong { font-weight: 700; }
+.g5ai-msg--bot em { font-style: italic; }
+
+.g5ai-msg--bot h1,
+.g5ai-msg--bot h2,
+.g5ai-msg--bot h3 {
+  margin: 12px 0 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.g5ai-msg--bot h3 { font-size: 13px; }
+
+.g5ai-msg--bot code {
+  background: var(--bg, #F4F1EA);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+body.dark .g5ai-msg--bot code {
+  background: rgba(255,255,255,0.08);
+}
+
+.g5ai-msg--bot pre {
+  background: var(--bg, #F4F1EA);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+body.dark .g5ai-msg--bot pre {
+  background: rgba(255,255,255,0.06);
+}
+.g5ai-msg--bot pre code {
+  background: none;
+  padding: 0;
+}
+
+.g5ai-msg--bot blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--muted, #6E6A5E);
+}
+
+.g5ai-msg--bot hr {
+  border: none;
+  border-top: 1px solid var(--border, #DCD5C3);
+  margin: 10px 0;
+}
+
+/* ===========================
    RESPONSIVE
    =========================== */
 @media (max-width: 768px) {
@@ -518,4 +620,7 @@ body.dark .g5ai-fab-badge { border-color: #1a1a2e; }
     max-height: none;
     border-radius: 18px 18px 0 0;
   }
+}
+.g5ai-msg--bot {
+  max-width: 100%;
 }

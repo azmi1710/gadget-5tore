@@ -1644,3 +1644,93 @@ body.dark .g5a-input::placeholder { color: rgba(255, 255, 255, 0.3); }
 .pcard-ask-btn i {
   font-size: 12px;
 }
+
+/* ============================================
+   MARKDOWN STYLING — Chat Bubbles
+   ============================================ */
+
+.lc-msg-body { word-break: break-word; }
+
+.lc-msg-body p {
+  margin: 0 0 6px 0;
+  line-height: 1.5;
+}
+.lc-msg-body p:last-child {
+  margin-bottom: 0;
+}
+
+.lc-msg-body ul,
+.lc-msg-body ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+.lc-msg-body li {
+  margin-bottom: 3px;
+  line-height: 1.45;
+}
+
+.lc-msg-body table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.lc-msg-body th,
+.lc-msg-body td {
+  border: 1px solid rgba(128,128,128,0.25);
+  padding: 5px 10px;
+  text-align: left;
+}
+.lc-msg-body th {
+  font-weight: 700;
+  background: rgba(128,128,128,0.08);
+}
+.lc-msg-body tr:nth-child(even) {
+  background: rgba(128,128,128,0.04);
+}
+
+.lc-msg-body strong { font-weight: 700; }
+.lc-msg-body em { font-style: italic; }
+
+.lc-msg-body h1,
+.lc-msg-body h2,
+.lc-msg-body h3 {
+  margin: 10px 0 4px 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.lc-msg-body code {
+  background: rgba(128,128,128,0.12);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+.lc-msg-body pre {
+  background: rgba(128,128,128,0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+}
+.lc-msg-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+}
+
+.lc-msg-body blockquote {
+  border-left: 3px solid rgba(128,128,128,0.3);
+  margin: 6px 0;
+  padding: 4px 12px;
+  color: rgba(128,128,128,0.85);
+}
+
+.lc-msg-body hr {
+  border: none;
+  border-top: 1px solid rgba(128,128,128,0.2);
+  margin: 8px 0;
+}

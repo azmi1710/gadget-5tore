@@ -410,9 +410,16 @@
         cleanMsg = cleanMsg.trim();
       }
 
+      var msgContent = '';
+      if (m.sender_type === 'admin' && typeof marked !== 'undefined') {
+        msgContent = marked.parse(cleanMsg);
+      } else {
+        msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
+      }
+
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + esc(cleanMsg)
+        + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
     }).join('')
@@ -641,9 +648,13 @@
       });
       renderCustomerMessages();
     } else if (mode === 'admin') {
-      statusText.textContent = adminName ? 'Admin: ' + adminName : 'Admin sedang melayani';
+      statusText.textContent = 'Terhubung';
       if (statusDot) { statusDot.classList.remove('offline', 'connecting'); }
-      if (modeBadge) { modeBadge.style.display = 'none'; }
+      if (modeBadge) {
+        modeBadge.textContent = '👤 ' + (adminName || 'Admin');
+        modeBadge.className = 'lc-mode-badge lc-mode-badge--admin';
+        modeBadge.style.display = '';
+      }
       if (input) { input.disabled = false; input.placeholder = 'Ketik pesan...'; }
       if (sendBtn) sendBtn.disabled = false;
       ctx.messages.push({
@@ -747,9 +758,15 @@
           updateCustomerChatStatus('ai');
         } else {
           var statusText = $('lcHeaderStatusText');
+          var modeBadge = $('lcModeBadge');
           if (statusText) {
             if (s.mode === 'admin') {
-              statusText.textContent = 'Admin: ' + (s.handled_by || '');
+              statusText.textContent = 'Terhubung';
+              if (modeBadge) {
+                modeBadge.textContent = '👤 ' + (s.handled_by || 'Admin');
+                modeBadge.className = 'lc-mode-badge lc-mode-badge--admin';
+                modeBadge.style.display = '';
+              }
             } else {
               statusText.textContent = 'Terhubung';
             }
@@ -1230,9 +1247,16 @@
         cleanMsg = cleanMsg.trim();
       }
 
+      var msgContent = '';
+      if (m.sender_type === 'admin' && typeof marked !== 'undefined') {
+        msgContent = marked.parse(cleanMsg);
+      } else {
+        msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
+      }
+
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + esc(cleanMsg)
+        + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + '</span>'
         + '</div>';
     }).join('');
