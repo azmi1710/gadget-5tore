@@ -499,28 +499,37 @@ body.dark .g5ai-fab-badge { border-color: #1a1a2e; }
 }
 
 .g5ai-msg--bot table {
-  border-collapse: collapse;
-  margin: 8px 0;
+  display: block;
   width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 8px 0;
   font-size: 12.5px;
   line-height: 1.4;
 }
 .g5ai-msg--bot th,
 .g5ai-msg--bot td {
+  white-space: nowrap;
   border: 1px solid var(--border, #DCD5C3);
   padding: 5px 10px;
   text-align: left;
 }
 .g5ai-msg--bot th {
   font-weight: 700;
-  background: var(--bg, #F4F1EA);
+  background: var(--accent-dim, rgba(200, 164, 78, 0.1));
+  color: var(--fg, #1B1611);
+  position: sticky;
+  top: 0;
 }
 .g5ai-msg--bot tr:nth-child(even) {
   background: rgba(0,0,0,0.02);
 }
 
 body.dark .g5ai-msg--bot th {
-  background: rgba(255,255,255,0.06);
+  background: rgba(200, 164, 78, 0.12);
+  color: #fff;
 }
 body.dark .g5ai-msg--bot th,
 body.dark .g5ai-msg--bot td {

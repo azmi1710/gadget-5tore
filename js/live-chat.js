@@ -881,6 +881,57 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ── Escalation Sound (2x beep, lebih urgent) ──
+  function playEscalationSound() {
+    try {
+      var ac = new (window.AudioContext || window.webkitAudioContext)();
+      for (var i = 0; i < 2; i++) {
+        (function(idx) {
+          var osc = ac.createOscillator();
+          var gain = ac.createGain();
+          osc.connect(gain);
+          gain.connect(ac.destination);
+          osc.type = 'sine';
+          var t = ac.currentTime + idx * 0.35;
+          osc.frequency.setValueAtTime(660, t);
+          osc.frequency.setValueAtTime(990, t + 0.08);
+          osc.frequency.setValueAtTime(880, t + 0.16);
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.28);
+          osc.start(t);
+          osc.stop(t + 0.28);
+        })(i);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ── Escalation Toast (klik → buka session) ──
+  function showEscalationToast(customerName, sessionId) {
+    var el = document.createElement('div');
+    el.className = 'lc-escalation-toast';
+    el.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>' + esc(customerName || 'Customer') + '</strong> butuh bantuan admin <button class="lc-escalation-toast-btn">Ambil Alih</button>';
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:Plus Jakarta Sans,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
+    el.querySelector('.lc-escalation-toast-btn').style.cssText = 'background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;';
+    el.querySelector('.lc-escalation-toast-btn').onclick = function (e) {
+      e.stopPropagation();
+      el.remove();
+      // Buka panel chat di dashboard kalau belum di situ
+      if (state) state.admin.panel = 'chat';
+      if (typeof renderSide === 'function') renderSide();
+      if (typeof renderDash === 'function') renderDash();
+      setTimeout(function () {
+        if (typeof selectSession === 'function') selectSession(sessionId);
+      }, 100);
+    };
+    setTimeout(function () {
+      if (el.parentNode) {
+        el.style.animation = 'lcToastOut 0.3s ease forwards';
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 300);
+      }
+    }, 8000);
+    document.body.appendChild(el);
+  }
+
   // ── Admin Inbox ────────────────────────────────
   function renderAdminInbox(el) {
     if (!state || !state.session || !state.session.currentUser) {
@@ -997,12 +1048,16 @@
     var badge = $('lcSidebarBadge');
     if (!badge) return;
 
-    var total = ctx.sessions.reduce(function (sum, s) { return sum + (s.unread_by_admin || 0); }, 0);
+    var unread = ctx.sessions.reduce(function (sum, s) { return sum + (s.unread_by_admin || 0); }, 0);
+    var waiting = ctx.sessions.filter(function (s) { return s.mode === 'connecting'; }).length;
+    var total = unread + waiting;
     if (total > 0) {
       badge.style.display = '';
       badge.textContent = total > 99 ? '99+' : total;
+      badge.style.background = waiting > 0 ? '#F59E0B' : '';
     } else {
       badge.style.display = 'none';
+      badge.style.background = '';
     }
   }
 
@@ -1443,7 +1498,18 @@
         event: 'UPDATE',
         schema: 'public',
         table: 'chat_sessions',
-      }, function () {
+      }, function (payload) {
+        var s = payload.new;
+        var old = payload.old;
+        // Escalation: mode berubah ke 'connecting'
+        if (s && s.mode === 'connecting' && old && old.mode !== 'connecting') {
+          var curRole = state && state.session && state.session.currentUser && state.session.currentUser.role;
+          var isDashboard = $('view-dashboard') && $('view-dashboard').classList.contains('active');
+          if ((curRole === 'admin' || curRole === 'editor') && isDashboard) {
+            playEscalationSound();
+            showEscalationToast(s.customer_name, s.session_id);
+          }
+        }
         loadAdminSessions();
       })
       .on('postgres_changes', {

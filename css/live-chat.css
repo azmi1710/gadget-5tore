@@ -1734,3 +1734,18 @@ body.dark .g5a-input::placeholder { color: rgba(255, 255, 255, 0.3); }
   border-top: 1px solid rgba(128,128,128,0.2);
   margin: 8px 0;
 }
+
+/* ===========================
+   ESCALATION TOAST ANIMATION
+   =========================== */
+@keyframes lcToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes lcToastOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+}
+.lc-escalation-toast-btn:hover {
+  background: #D97706 !important;
+}
