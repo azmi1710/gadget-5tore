@@ -167,13 +167,35 @@ function applySettings() {
     }
     link.href = s.favicon_url;
   }
-  if (s.hero_headline) { const h = document.querySelector('.hero-headline'); if (h) h.innerHTML = '<span>' + esc(s.hero_headline) + '</span>'; }
+  if (s.hero_headline) {
+    const h = document.querySelector('.hero-headline');
+    if (h) {
+      const t = s.hero_headline.trim();
+      const idx = t.indexOf(' ');
+      if (idx > -1) {
+        h.innerHTML = esc(t.slice(0, idx)) + ' <span>' + esc(t.slice(idx + 1)) + '</span>';
+      } else {
+        h.innerHTML = esc(t);
+      }
+    }
+  }
   if (s.hero_subline) { const p = document.querySelector('.hero-subline'); if (p) p.textContent = s.hero_subline; }
   if (s.hero_badge) { const hb = document.querySelector('.hero-badge-text'); if (hb) hb.textContent = s.hero_badge; }
-  if (s.store_name) { const fn = document.querySelector('.footer-store-name'); if (fn) fn.textContent = s.store_name; }
-  if (s.footer_text) { const ft = document.querySelector('.footer-store-name'); if (ft) ft.textContent = s.footer_text; }
   if (s.footer_year) { const fy = document.querySelector('.footer-year'); if (fy) fy.textContent = s.footer_year; }
+  if (s.store_name || s.footer_text) { const fn = document.querySelector('.footer-store-name'); if (fn) fn.textContent = s.footer_text || s.store_name || ''; }
   if (s.tagline) { const tg = document.querySelector('.footer-tagline'); if (tg) tg.textContent = s.tagline; }
+  if (s.store_name) {
+    const logo = document.getElementById('pubLogoBtn');
+    if (logo) {
+      const name = s.store_name;
+      const match = name.match(/^(.*?)(\d+)(.*)$/);
+      if (match) {
+        logo.innerHTML = '<span>' + esc(match[1]) + '</span><span class="fv">' + esc(match[2]) + '</span><span class="rest">' + esc(match[3]) + '</span>';
+      } else {
+        logo.innerHTML = '<span>' + esc(name) + '</span>';
+      }
+    }
+  }
 }
 function initSelectedBranch() {
   if (!state.db.branches.length) { state.session.selectedBranch = null; return; }
@@ -2557,7 +2579,6 @@ function renderSettingsPanel(el) {
   `;
   const kontenContent = `
     <div class="form-group"><label class="form-label">Jangka Waktu Terbaru (hari)</label><input type="number" class="form-input" id="setNewestDays" value="${s.newest_days || 7}" min="1" max="365" placeholder="7"><span style="font-size:10px;color:var(--muted);margin-top:3px;display:block">Produk yang ditambahkan dalam X hari terakhir muncul di tab Terbaru</span></div>
-    <div class="form-group"><label class="form-label">Tahun Footer</label><input class="form-input" id="setFooterYear" value="${esc(s.footer_year || '')}" placeholder="2025"></div>
     <div class="form-group"><label class="form-label">Footer Text</label><input class="form-input" id="setFooterText" value="${esc(s.footer_text || '')}" placeholder="© 2025 Gadget 5tore"></div>
   `;
   const seoContent = `
@@ -2588,9 +2609,8 @@ async function saveSettings() {
     hero_badge: document.getElementById('setHeroBadge').value.trim(),
     hero_headline: document.getElementById('setHeroHeadline').value.trim(),
     hero_subline: document.getElementById('setHeroSubline').value.trim(),
-    footer_year: document.getElementById('setFooterYear').value.trim(),
-    footer_text: document.getElementById('setFooterText').value.trim(),
     newest_days: parseInt(document.getElementById('setNewestDays').value) || 7,
+    footer_text: document.getElementById('setFooterText').value.trim(),
     meta_title: document.getElementById('setMetaTitle').value.trim(),
     meta_description: document.getElementById('setMetaDesc').value.trim(),
   };

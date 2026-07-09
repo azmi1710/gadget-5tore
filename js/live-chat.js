@@ -32,6 +32,7 @@
     activeTab: 'active',
     closedSessions: [],
     closedCount: 0,
+    activeFilter: null, // null = all, 'ai', 'connecting', 'admin'
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -1050,13 +1051,23 @@
     var isHistory = ctx.activeTab === 'history';
     var list = isHistory ? ctx.closedSessions : ctx.sessions;
 
+    // Apply filter if on active tab
+    if (!isHistory && ctx.activeFilter) {
+      list = list.filter(function (s) { return s.mode === ctx.activeFilter; });
+    }
+
     if (countEl) countEl.textContent = list.length;
 
     if (!list.length) {
+      var emptyMsg = isHistory ? 'Belum ada riwayat'
+        : (ctx.activeFilter === 'ai' ? 'Tidak ada sesi AI'
+          : ctx.activeFilter === 'connecting' ? 'Tidak ada sesi menunggu'
+            : ctx.activeFilter === 'admin' ? 'Tidak ada sesi aktif'
+              : 'Belum ada sesi chat');
       listEl.innerHTML =
         '<div class="lc-sessions-empty">'
         + '<i class="fas fa-inbox"></i>'
-        + '<span>' + (isHistory ? 'Belum ada riwayat' : 'Belum ada sesi chat') + '</span>'
+        + '<span>' + emptyMsg + '</span>'
         + '</div>';
       return;
     }
@@ -1112,20 +1123,23 @@
       else ai++;
     }
 
+    var f = ctx.activeFilter;
+    var sel = function (val) { return f === val ? ' lc-inbox-summary-card--selected' : ''; };
+
     el.innerHTML =
-      '<div class="lc-inbox-summary-card lc-inbox-summary-card--ai">'
+      '<div class="lc-inbox-summary-card lc-inbox-summary-card--ai' + sel('ai') + '" onclick="window.__lcSwitchFilter(\'ai\')">'
       + '<span class="lc-inbox-summary-num">' + ai + '</span>'
       + '<span class="lc-inbox-summary-label">AI</span>'
       + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--waiting">'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--waiting' + sel('connecting') + '" onclick="window.__lcSwitchFilter(\'connecting\')">'
       + '<span class="lc-inbox-summary-num">' + waiting + '</span>'
       + '<span class="lc-inbox-summary-label">Menunggu</span>'
       + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--active">'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--active' + sel('admin') + '" onclick="window.__lcSwitchFilter(\'admin\')">'
       + '<span class="lc-inbox-summary-num">' + active + '</span>'
       + '<span class="lc-inbox-summary-label">Aktif</span>'
       + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--closed">'
+      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--closed" onclick="window.__lcSwitchFilter(\'closed\')">'
       + '<span class="lc-inbox-summary-num">' + ctx.closedCount + '</span>'
       + '<span class="lc-inbox-summary-label">Selesai</span>'
       + '</div>';
@@ -1139,10 +1153,48 @@
     if (historyBadge) historyBadge.textContent = ctx.closedCount;
   }
 
+  // ── Filter Switching (Summary Cards) ────────────
+  function switchInboxFilter(filter) {
+    // "closed" → switch to history tab
+    if (filter === 'closed') {
+      ctx.activeFilter = null;
+      switchInboxTab('history');
+      return;
+    }
+
+    // If on history tab, switch back to active first
+    if (ctx.activeTab === 'history') {
+      switchInboxTab('active');
+    }
+
+    // Toggle: klik filter yang sama → reset ke semua
+    if (ctx.activeFilter === filter) {
+      ctx.activeFilter = null;
+    } else {
+      ctx.activeFilter = filter;
+    }
+
+    ctx.activeSessionId = null;
+    renderInboxSummary();
+    renderSessionList();
+
+    // Reset chat area
+    var chatEl = $('lcInboxChat');
+    if (chatEl) {
+      chatEl.innerHTML =
+        '<div class="lc-inbox-empty">'
+        + '<i class="fas fa-comments"></i>'
+        + '<h3>Inbox Chat</h3>'
+        + '<p>Pilih sesi chat untuk melihat percakapan</p>'
+        + '</div>';
+    }
+  }
+
   // ── Tab Switching ───────────────────────────────
   function switchInboxTab(tab) {
     ctx.activeTab = tab;
     ctx.activeSessionId = null;
+    ctx.activeFilter = null; // reset filter when switching tabs
 
     // Update tab buttons
     var tabs = document.querySelectorAll('.lc-inbox-tab');
@@ -1153,6 +1205,9 @@
     // Hide/show summary (only show on active tab)
     var summary = $('lcInboxSummary');
     if (summary) summary.style.display = tab === 'active' ? '' : 'none';
+
+    // Re-render summary to clear filter selected state
+    if (tab === 'active') renderInboxSummary();
 
     if (tab === 'history') {
       loadClosedSessions();
@@ -1630,6 +1685,8 @@
   window.__lcCloseSession = function (id) { closeSession(id); };
 
   window.__lcSwitchTab = function (tab) { switchInboxTab(tab); };
+
+  window.__lcSwitchFilter = function (filter) { switchInboxFilter(filter); };
 
   window.__lcDeleteSession = function (id) { deleteSession(id); };
 

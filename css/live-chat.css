@@ -601,6 +601,20 @@
   padding: 8px 4px;
   border-radius: 8px;
   background: var(--bg, #F4F1EA);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 2px solid transparent;
+  user-select: none;
+}
+
+.lc-inbox-summary-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.lc-inbox-summary-card--selected {
+  border-color: var(--accent, #E85D3A);
+  box-shadow: 0 0 0 1px var(--accent, #E85D3A);
 }
 
 .lc-inbox-summary-num {
@@ -1024,6 +1038,8 @@ body.dark .lc-inbox-tab.active { background: rgba(200, 164, 78, 0.12); color: va
 
 body.dark .lc-inbox-summary-card { background: rgba(255, 255, 255, 0.03); }
 body.dark .lc-inbox-summary-label { color: rgba(255, 255, 255, 0.35); }
+body.dark .lc-inbox-summary-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+body.dark .lc-inbox-summary-card--selected { border-color: var(--accent, #E85D3A); box-shadow: 0 0 0 1px var(--accent, #E85D3A); }
 
 body.dark .lc-inbox-chat-head {
   background: #1a1a2e;
