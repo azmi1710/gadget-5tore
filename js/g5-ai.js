@@ -17,7 +17,7 @@
 
   // ── Config ──────────────────────────────────────
   var N8N_G5_AI_URL = (typeof window.N8N_G5_AI_URL !== 'undefined') ? window.N8N_G5_AI_URL : '';
-  var AI_NAME = 'G5 AI';
+  var AI_NAME = 'G5 Assistant';
   var WELCOME_CHIPS = [];
 
   // ── Internal State ──────────────────────────────
@@ -29,14 +29,6 @@
     popupEl: null,
     observer: null,
     sessionId: null,
-    // Drag state
-    dragging: false,
-    moved: false,
-    startX: 0,
-    startY: 0,
-    startLeft: 0,
-    startTop: 0,
-    edge: 'right',
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -153,33 +145,15 @@
   function buildUI() {
     if (ctx.fabEl) return;
 
-    // FAB (bubble)
-    var fab = document.createElement('div');
+    // FAB
+    var fab = document.createElement('button');
     fab.className = 'g5ai-fab';
     fab.id = 'g5aiFab';
-    fab.title = 'G5 AI Assistant';
+    fab.title = 'G5 Assistant';
     fab.innerHTML = '<i class="fas fa-robot g5ai-fab-icon"></i><span class="g5ai-fab-badge" id="g5aiFabBadge">0</span>';
+    fab.onclick = togglePopup;
     document.body.appendChild(fab);
     ctx.fabEl = fab;
-
-    // Restore saved position
-    var saved = null;
-    try { saved = JSON.parse(localStorage.getItem('g5ai_bubble_pos')); } catch (e) { /* */ }
-    if (saved) {
-      ctx.edge = saved.edge || 'right';
-      positionBubble(saved.y, saved.edge);
-    } else {
-      positionBubble(window.innerHeight * 0.5, 'right');
-    }
-
-    // Click to open (primary)
-    fab.addEventListener('click', function (e) {
-      if (ctx._wasDragged) { ctx._wasDragged = false; return; }
-      togglePopup();
-    });
-    // Drag events
-    fab.addEventListener('mousedown', onFabDown);
-    fab.addEventListener('touchstart', onFabDown, { passive: false });
 
     // Popup
     var popup = document.createElement('div');
@@ -195,7 +169,7 @@
       + '</div>'
       + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i class="fas fa-list-check"></i></button>'
       + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i class="fas fa-trash-alt"></i></button>'
-      + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i class="fas fa-xmark"></i></button>'
+      + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i class="fas fa-times"></i></button>'
       + '</div>'
       + buildDemoPickerHTML()
       + '<div class="g5ai-messages" id="g5aiMessages"></div>'
@@ -207,6 +181,7 @@
     ctx.popupEl = popup;
 
     // Events
+    $('g5aiCloseBtn').onclick = function () { closePopup(); };
     $('g5aiSendBtn').onclick = function () { sendMessage(); };
     $('g5aiInput').onkeydown = function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -216,10 +191,6 @@
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
     };
     $('g5aiClearBtn').onclick = clearChat;
-    $('g5aiCloseBtn').onclick = function (e) {
-      e.stopPropagation();
-      closePopup();
-    };
 
     // Demo picker events
     $('g5aiDemoBtn').onclick = function (e) {
@@ -268,132 +239,6 @@
     });
   }
 
-  // ── Bubble Positioning & Drag ──────────────────
-  function positionBubble(y, edge) {
-    var b = ctx.fabEl;
-    if (!b) return;
-    var h = b.offsetHeight || 38;
-    y = Math.max(10, Math.min(y, window.innerHeight - h - 10));
-    ctx.edge = edge;
-    b.style.top = y + 'px';
-    b.style.left = edge === 'left' ? '0' : 'auto';
-    b.style.right = edge === 'right' ? '0' : 'auto';
-    b.style.borderRadius = edge === 'right' ? '50% 0 0 50%' : '0 50% 50% 0';
-  }
-
-  function saveBubblePos() {
-    try {
-      localStorage.setItem('g5ai_bubble_pos', JSON.stringify({
-        y: parseFloat(ctx.fabEl.style.top),
-        edge: ctx.edge
-      }));
-    } catch (e) { /* */ }
-  }
-
-  function positionPopup() {
-    var p = ctx.popupEl;
-    var b = ctx.fabEl;
-    if (!p || !b) return;
-    var bRect = b.getBoundingClientRect();
-    var pW = p.offsetWidth || 400;
-    var pH = p.offsetHeight || 540;
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
-    var gap = 12;
-
-    // Clear all position
-    p.style.top = '';
-    p.style.bottom = '';
-    p.style.left = '';
-    p.style.right = '';
-
-    if (vw <= 480) {
-      // Full width on mobile
-      p.style.left = '0';
-      p.style.right = '0';
-      p.style.bottom = '0';
-      p.style.top = 'auto';
-      return;
-    }
-
-    if (vw <= 768) {
-      // Nearly full width on tablet
-      p.style.left = '8px';
-      p.style.right = '8px';
-      p.style.bottom = '10px';
-      p.style.top = 'auto';
-      return;
-    }
-
-    // Desktop: position next to bubble
-    if (ctx.edge === 'right') {
-      p.style.right = gap + 'px';
-      p.style.left = 'auto';
-    } else {
-      p.style.left = gap + 'px';
-      p.style.right = 'auto';
-    }
-
-    // Vertically center near bubble, but constrain
-    var bCenter = bRect.top + bRect.height / 2;
-    var top = bCenter - pH / 2;
-    top = Math.max(10, Math.min(top, vh - pH - 10));
-    p.style.top = top + 'px';
-    p.style.bottom = 'auto';
-  }
-
-  function onFabDown(e) {
-    ctx.dragging = true;
-    ctx.moved = false;
-    ctx._wasDragged = false;
-    var pt = e.touches ? e.touches[0] : e;
-    ctx.startX = pt.clientX;
-    ctx.startY = pt.clientY;
-    var rect = ctx.fabEl.getBoundingClientRect();
-    ctx.startLeft = rect.left;
-    ctx.startTop = rect.top;
-    document.addEventListener('mousemove', onFabMove);
-    document.addEventListener('mouseup', onFabUp);
-    document.addEventListener('touchmove', onFabMove, { passive: false });
-    document.addEventListener('touchend', onFabUp);
-  }
-
-  function onFabMove(e) {
-    if (!ctx.dragging) return;
-    e.preventDefault();
-    var pt = e.touches ? e.touches[0] : e;
-    var dx = pt.clientX - ctx.startX;
-    var dy = pt.clientY - ctx.startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) ctx.moved = true;
-    var b = ctx.fabEl;
-    var h = b.offsetHeight || 38;
-    var newY = Math.max(10, Math.min(ctx.startTop + dy, window.innerHeight - h - 10));
-    var newX = Math.max(0, Math.min(ctx.startLeft + dx, window.innerWidth - h));
-    b.style.top = newY + 'px';
-    b.style.left = newX + 'px';
-    b.style.right = 'auto';
-    b.style.borderRadius = '50%';
-  }
-
-  function onFabUp(e) {
-    if (!ctx.dragging) return;
-    ctx.dragging = false;
-    document.removeEventListener('mousemove', onFabMove);
-    document.removeEventListener('mouseup', onFabUp);
-    document.removeEventListener('touchmove', onFabMove);
-    document.removeEventListener('touchend', onFabUp);
-
-    if (ctx.moved) {
-      ctx._wasDragged = true;
-      // Snap to nearest edge
-      var rect = ctx.fabEl.getBoundingClientRect();
-      var centerX = rect.left + rect.width / 2;
-      var edge = centerX < window.innerWidth / 2 ? 'left' : 'right';
-      positionBubble(rect.top, edge);
-      saveBubblePos();
-    }
-  }
-
   // ── Toggle Popup ────────────────────────────────
   function togglePopup() {
     if (ctx.isOpen) {
@@ -408,7 +253,6 @@
     ctx.popupEl.style.display = 'flex';
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
-    positionPopup();
 
     // Buat session_id konsisten sekali per sesi chat
     if (!ctx.sessionId) {
@@ -638,23 +482,16 @@
     if (!dashView) return;
 
     ctx.observer = new MutationObserver(function () {
-      showFabIfAllowed();
-      if (!isDashboardActive() && ctx.isOpen) closePopup();
+      var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
+      if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
+      if (!show && ctx.isOpen) closePopup();
     });
 
     ctx.observer.observe(dashView, { attributes: true, attributeFilter: ['class'] });
 
-    // Also hook renderDash to catch panel switches
-    var origRD = window.renderDash;
-    if (origRD) {
-      window.renderDash = function () {
-        origRD.apply(this, arguments);
-        showFabIfAllowed();
-      };
-    }
-
     // Initial check
-    showFabIfAllowed();
+    var show = isDashboardActive() && isAllowedRole();
+    if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
   }
 
   // ── Watch Login State ──────────────────────────
@@ -664,7 +501,9 @@
 
 function showFabIfAllowed() {
   var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
-  if (ctx.fabEl) ctx.fabEl.style.display = show ? 'flex' : 'none';
+  if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
+  var g5aFab = document.querySelector('#g5aFab');
+  if (g5aFab) g5aFab.style.display = 'none';
 }
   function watchLoginState() {
     var origDoLogin = window.doLogin;
@@ -706,25 +545,6 @@ function showFabIfAllowed() {
   // ── Close on Escape ────────────────────────────
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && ctx.isOpen) closePopup();
-  });
-
-  // ── Close on click outside popup ─────────────
-  document.addEventListener('mousedown', function (e) {
-    if (!ctx.isOpen) return;
-    if (ctx.popupEl.contains(e.target)) return;
-    if (ctx.fabEl && ctx.fabEl.contains(e.target)) return;
-    closePopup();
-  });
-  document.addEventListener('touchstart', function (e) {
-    if (!ctx.isOpen) return;
-    if (ctx.popupEl.contains(e.target)) return;
-    if (ctx.fabEl && ctx.fabEl.contains(e.target)) return;
-    closePopup();
-  }, { passive: true });
-
-  // Reposition popup on resize
-  window.addEventListener('resize', function () {
-    if (ctx.isOpen) positionPopup();
   });
 
   // ── PUBLIC API ─────────────────────────────────

@@ -4,34 +4,47 @@
    Premium 2025 Redesign
    ============================================ */
 
-/* --- FAB Button (floating bubble) --- */
+/* --- FAB Button --- */
 .g5ai-fab {
   position: fixed;
-  right: 0;
-  top: 50%;
-  width: 38px;
-  height: 38px;
-  border-radius: 50% 0 0 50%;
+  bottom: 28px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   border: none;
-  background: #C8A44E;
+  background: linear-gradient(135deg, #D4A239 0%, #C8A44E 40%, #B8922A 100%);
   color: #fff;
-  font-size: 14px;
-  cursor: grab;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow:
+    0 6px 24px rgba(200, 164, 78, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 40px rgba(212, 162, 57, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 500;
-  pointer-events: auto;
-  box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.12);
+  animation: g5aiFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2), g5aiFabPulse 3s ease-in-out 1.5s infinite;
 }
 
-.g5ai-fab:active { cursor: grabbing; }
+.g5ai-fab:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow:
+    0 10px 36px rgba(200, 164, 78, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.14),
+    0 0 50px rgba(212, 162, 57, 0.25);
+  animation: g5aiFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.g5ai-fab:active {
+  transform: scale(0.95);
+  animation: none;
+}
 
 .g5ai-fab .g5ai-fab-icon {
-  transition: none;
+  transition: transform 0.3s ease;
 }
 
 .g5ai-fab.open .g5ai-fab-icon {
@@ -40,30 +53,60 @@
 
 .g5ai-fab-badge {
   position: absolute;
-  top: -3px;
-  left: -3px;
-  min-width: 15px;
-  height: 15px;
-  border-radius: 8px;
+  top: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   background: var(--danger, #B91C1C);
   color: #fff;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 3px;
   border: 2px solid var(--bg, #F4F1EA);
-  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.3);
+  display: none;
+  animation: g5aiBadgePop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.4);
+}
+
+@keyframes g5aiBadgePop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes g5aiFabIn {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes g5aiFabPulse {
+  0%, 100% {
+    box-shadow:
+      0 6px 24px rgba(200, 164, 78, 0.45),
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 40px rgba(212, 162, 57, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 6px 24px rgba(200, 164, 78, 0.45),
+      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 55px rgba(212, 162, 57, 0.3),
+      0 0 20px rgba(212, 162, 57, 0.1);
+  }
 }
 
 /* --- Chat Popup --- */
 .g5ai-popup {
   position: fixed;
+  bottom: 96px;
+  right: 28px;
   width: 400px;
   max-width: calc(100vw - 32px);
   height: 540px;
-  max-height: calc(100vh - 80px);
+  max-height: calc(100vh - 140px);
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -137,7 +180,7 @@
   font-size: 15px;
   font-weight: 800;
   color: #F1F0ED;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   letter-spacing: -0.2px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -189,14 +232,13 @@
   transform: scale(1.05);
 }
 
-/* --- Close Button --- */
 .g5ai-header-close {
   width: 32px;
   height: 32px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   cursor: pointer;
   display: flex;
@@ -209,10 +251,14 @@
 }
 
 .g5ai-header-close:hover {
-  background: rgba(185, 28, 28, 0.2);
-  border-color: rgba(185, 28, 28, 0.4);
-  color: #F87171;
-  transform: scale(1.05);
+  background: rgba(220, 50, 50, 0.2);
+  border-color: rgba(220, 50, 50, 0.4);
+  color: #f87171;
+  transform: scale(1.08);
+}
+
+.g5ai-header-close:active {
+  transform: scale(0.95);
 }
 
 /* --- Demo Picker Button --- */
@@ -286,7 +332,7 @@
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--fg, #1B1611);
   min-width: 0;
   transition: background 0.2s ease;
@@ -335,7 +381,7 @@
   background: transparent;
   padding: 8px 14px 8px 24px;
   font-size: 11.5px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--fg2, #38322A);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -359,22 +405,29 @@
 .g5ai-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  overflow-x: hidden;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background: var(--bg, #F4F1EA);
   scroll-behavior: smooth;
+  min-height: 0;
 }
 
+.g5ai-messages::-webkit-scrollbar { width: 4px; }
+.g5ai-messages::-webkit-scrollbar-track { background: transparent; }
+.g5ai-messages::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+
 .g5ai-msg {
-  max-width: 85%;
-  padding: 10px 14px;
-  border-radius: 16px;
+  max-width: 88%;
+  padding: 8px 12px;
+  border-radius: 14px;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.48;
   word-break: break-word;
-  animation: g5aiMsgIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow-wrap: break-word;
+  animation: g5aiMsgIn 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .g5ai-msg p,
@@ -445,7 +498,8 @@ body.dark .g5ai-msg hr {
   border-bottom-left-radius: 4px;
   border: 1px solid rgba(200, 164, 78, 0.12);
   border-left: 2px solid var(--accent, #C8A44E);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  min-width: 0;
 }
 
 .g5ai-msg--user {
@@ -454,9 +508,10 @@ body.dark .g5ai-msg hr {
   color: #fff;
   border-bottom-right-radius: 4px;
   white-space: pre-line;
-  box-shadow: 0 4px 16px rgba(200, 164, 78, 0.3), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(200, 164, 78, 0.25), 0 1px 3px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
+  min-width: 0;
 }
 
 .g5ai-msg--user::before {
@@ -484,19 +539,19 @@ body.dark .g5ai-msg hr {
 /* --- Scrollable table inside bubble --- */
 .g5ai-msg table {
   display: block;
+  width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+ overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
   border-collapse: collapse;
-  font-size: 12px;
-  margin: 8px 0;
+  font-size: 11px;
+  margin: 6px 0;
 }
 
 .g5ai-msg table th,
 .g5ai-msg table td {
   white-space: nowrap;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border: 1px solid var(--border, #DCD5C3);
 }
 
@@ -568,8 +623,8 @@ body.dark .g5ai-msg table th {
 .g5ai-input-area {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 10px 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
@@ -580,15 +635,15 @@ body.dark .g5ai-msg table th {
 .g5ai-input {
   flex: 1;
   border: 1.5px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
-  padding: 11px 16px;
+  border-radius: 20px;
+  padding: 9px 14px;
   font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--fg, #1B1611);
   background: rgba(0, 0, 0, 0.025);
   resize: none;
-  min-height: 44px;
-  max-height: 100px;
+  min-height: 38px;
+  max-height: 90px;
   line-height: 1.4;
   outline: none;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -606,13 +661,13 @@ body.dark .g5ai-msg table th {
 }
 
 .g5ai-send {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, #D4A239 0%, #C8A44E 40%, #B8922A 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -677,7 +732,7 @@ body.dark .g5ai-msg table th {
   font-size: 17px;
   font-weight: 800;
   color: var(--fg, #1B1611);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   background: linear-gradient(135deg, var(--fg, #1B1611) 0%, var(--accent, #C8A44E) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -712,7 +767,7 @@ body.dark .g5ai-msg table th {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
@@ -768,21 +823,6 @@ body.dark .g5ai-header-clear:hover {
   background: rgba(200, 164, 78, 0.12);
   border-color: rgba(200, 164, 78, 0.3);
   color: #D4A239;
-  transform: scale(1.05);
-}
-
-body.dark .g5ai-header-close {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-body.dark .g5ai-header-close:hover {
-  background: rgba(185, 28, 28, 0.15);
-  border-color: rgba(185, 28, 28, 0.35);
-  color: #F87171;
   transform: scale(1.05);
 }
 
@@ -919,30 +959,50 @@ body.dark .g5ai-welcome-chip:hover {
 body.dark .g5ai-fab-badge { border-color: #0A0B14; }
 
 body.dark .g5ai-fab {
-  background: #A6873E;
-  box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 6px 24px rgba(200, 164, 78, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(212, 162, 57, 0.15);
 }
 
 /* ===========================
    RESPONSIVE
    =========================== */
 @media (max-width: 768px) {
+  .g5ai-fab {
+    bottom: 90px;
+    right: 16px;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
   .g5ai-popup {
+    bottom: 80px;
     right: 8px;
     left: 8px;
     width: auto;
-    height: calc(100vh - 100px);
+    height: calc(100vh - 160px);
     max-height: none;
     border-radius: 18px;
   }
 }
 
 @media (max-width: 480px) {
+  .g5ai-fab {
+    bottom: 80px;
+    right: 12px;
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+
   .g5ai-popup {
+    bottom: 72px;
     right: 0;
     left: 0;
     width: 100%;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 130px);
     max-height: none;
     border-radius: 18px 18px 0 0;
   }
