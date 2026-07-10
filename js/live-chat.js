@@ -439,10 +439,11 @@
         msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
       }
 
+      var checkHtml = (cls.indexOf('customer') !== -1) ? '<span class="lc-msg-check">\u2713\u2713</span>' : '';
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
         + '<div class="lc-msg-body">' + msgContent + '</div>'
-        + '<span class="lc-msg-time">' + t + '</span>'
+        + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
         + '</div>';
     }).join('')
     + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
@@ -1402,10 +1403,11 @@
         msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
       }
 
+      var checkHtml = (cls.indexOf('customer') !== -1) ? '<span class="lc-msg-check">\u2713\u2713</span>' : '';
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
         + '<div class="lc-msg-body">' + msgContent + '</div>'
-        + '<span class="lc-msg-time">' + t + '</span>'
+        + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
         + '</div>';
     }).join('');
 
