@@ -24,6 +24,7 @@
   user-select: none;
   -webkit-user-select: none;
   z-index: 500;
+  pointer-events: auto;
   box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.12);
 }
 
@@ -185,6 +186,32 @@
   background: rgba(200, 164, 78, 0.18);
   border-color: rgba(200, 164, 78, 0.35);
   color: #D4A239;
+  transform: scale(1.05);
+}
+
+/* --- Close Button --- */
+.g5ai-header-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.g5ai-header-close:hover {
+  background: rgba(185, 28, 28, 0.2);
+  border-color: rgba(185, 28, 28, 0.4);
+  color: #F87171;
   transform: scale(1.05);
 }
 
@@ -741,6 +768,21 @@ body.dark .g5ai-header-clear:hover {
   background: rgba(200, 164, 78, 0.12);
   border-color: rgba(200, 164, 78, 0.3);
   color: #D4A239;
+  transform: scale(1.05);
+}
+
+body.dark .g5ai-header-close {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+body.dark .g5ai-header-close:hover {
+  background: rgba(185, 28, 28, 0.15);
+  border-color: rgba(185, 28, 28, 0.35);
+  color: #F87171;
   transform: scale(1.05);
 }
 

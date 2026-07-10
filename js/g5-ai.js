@@ -195,6 +195,7 @@
       + '</div>'
       + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i class="fas fa-list-check"></i></button>'
       + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i class="fas fa-trash-alt"></i></button>'
+      + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i class="fas fa-xmark"></i></button>'
       + '</div>'
       + buildDemoPickerHTML()
       + '<div class="g5ai-messages" id="g5aiMessages"></div>'
@@ -215,6 +216,10 @@
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
     };
     $('g5aiClearBtn').onclick = clearChat;
+    $('g5aiCloseBtn').onclick = function (e) {
+      e.stopPropagation();
+      closePopup();
+    };
 
     // Demo picker events
     $('g5aiDemoBtn').onclick = function (e) {
@@ -702,6 +707,20 @@ function showFabIfAllowed() {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && ctx.isOpen) closePopup();
   });
+
+  // ── Close on click outside popup ─────────────
+  document.addEventListener('mousedown', function (e) {
+    if (!ctx.isOpen) return;
+    if (ctx.popupEl.contains(e.target)) return;
+    if (ctx.fabEl && ctx.fabEl.contains(e.target)) return;
+    closePopup();
+  });
+  document.addEventListener('touchstart', function (e) {
+    if (!ctx.isOpen) return;
+    if (ctx.popupEl.contains(e.target)) return;
+    if (ctx.fabEl && ctx.fabEl.contains(e.target)) return;
+    closePopup();
+  }, { passive: true });
 
   // Reposition popup on resize
   window.addEventListener('resize', function () {
