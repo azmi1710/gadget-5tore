@@ -43,6 +43,20 @@
   animation: none;
 }
 
+/* Dragging state — matiin semua transition & animation */
+.g5ai-fab.dragging {
+  transition: none !important;
+  animation: none !important;
+  transform: scale(1.08) !important;
+  box-shadow:
+    0 12px 40px rgba(200, 164, 78, 0.6),
+    0 4px 16px rgba(0, 0, 0, 0.18),
+    0 0 60px rgba(212, 162, 57, 0.3) !important;
+  cursor: grabbing;
+  z-index: 600;
+  opacity: 0.92;
+}
+
 .g5ai-fab .g5ai-fab-icon {
   transition: transform 0.3s ease;
 }

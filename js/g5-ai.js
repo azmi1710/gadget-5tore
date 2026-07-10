@@ -29,6 +29,19 @@
     popupEl: null,
     observer: null,
     sessionId: null,
+    // Drag state
+    drag: {
+      active: false,
+      startX: 0,
+      startY: 0,
+      offsetX: 0,
+      offsetY: 0,
+      moved: false,
+      fabX: 0,
+      fabY: 0,
+      fabW: 56,
+      fabH: 56,
+    },
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -141,6 +154,313 @@
     return html;
   }
 
+  // ── Draggable FAB ─────────────────────────────
+  var DRAG_THRESHOLD = 6; // px — di bawah ini dianggap klik
+  var EDGE_HIDE_RATIO = 0.55; // 55% FAB tersembunyi di balik edge
+  var IDLE_BEFORE_HIDE = 3000; // 3 detik idle sebelum nempel ke edge
+  var edgeIdleTimer = null;
+
+  function initDrag() {
+    var fab = ctx.fabEl;
+    if (!fab) return;
+
+    // Mouse
+    fab.addEventListener('mousedown', onDragStart);
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+
+    // Touch
+    fab.addEventListener('touchstart', onDragStart, { passive: false });
+    document.addEventListener('touchmove', onDragMove, { passive: false });
+    document.addEventListener('touchend', onDragEnd);
+
+    // Hover: slide out dari edge
+    fab.addEventListener('mouseenter', function () {
+      if (fab.classList.contains('edge-hidden')) {
+        slideOutFromEdge();
+        resetIdleTimer();
+      }
+    });
+    fab.addEventListener('mouseleave', function () {
+      if (!ctx.isOpen && !ctx.drag.active) {
+        scheduleEdgeHide();
+      }
+    });
+
+    // Initial snap to default position, lalu hide ke edge
+    setTimeout(function () {
+      snapToEdge();
+      setTimeout(function () {
+        if (!ctx.isOpen) hideToEdge();
+      }, 500);
+    }, 600);
+  }
+
+  function getPointerPos(e) {
+    if (e.touches && e.touches.length) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function onDragStart(e) {
+    // Kalau lagi edge-hidden, slide out dulu
+    if (ctx.fabEl.classList.contains('edge-hidden')) {
+      slideOutFromEdge();
+      return;
+    }
+
+    var pos = getPointerPos(e);
+    var fab = ctx.fabEl;
+    var rect = fab.getBoundingClientRect();
+
+    ctx.drag.startX = pos.x;
+    ctx.drag.startY = pos.y;
+    ctx.drag.offsetX = pos.x - rect.left;
+    ctx.drag.offsetY = pos.y - rect.top;
+    ctx.drag.moved = false;
+    ctx.drag.fabW = rect.width;
+    ctx.drag.fabH = rect.height;
+    ctx.drag.active = true;
+
+    cancelEdgeHide();
+    e.preventDefault();
+  }
+
+  function onDragMove(e) {
+    if (!ctx.drag.active) return;
+    e.preventDefault();
+
+    var pos = getPointerPos(e);
+    var dx = pos.x - ctx.drag.startX;
+    var dy = pos.y - ctx.drag.startY;
+
+    if (!ctx.drag.moved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+    ctx.drag.moved = true;
+
+    var fab = ctx.fabEl;
+    fab.classList.add('dragging');
+    fab.classList.remove('edge-hidden');
+
+    var newX = pos.x - ctx.drag.offsetX;
+    var newY = pos.y - ctx.drag.offsetY;
+
+    // Clamp ke viewport
+    var maxX = window.innerWidth - ctx.drag.fabW;
+    var maxY = window.innerHeight - ctx.drag.fabH;
+    newX = Math.max(0, Math.min(newX, maxX));
+    newY = Math.max(0, Math.min(newY, maxY));
+
+    ctx.drag.fabX = newX;
+    ctx.drag.fabY = newY;
+
+    // Switch ke top/left positioning
+    fab.style.bottom = 'auto';
+    fab.style.right = 'auto';
+    fab.style.left = newX + 'px';
+    fab.style.top = newY + 'px';
+
+    // Update popup position real-time kalau sedang buka
+    if (ctx.isOpen) {
+      positionPopup();
+    }
+  }
+
+  function onDragEnd(e) {
+    if (!ctx.drag.active) return;
+    ctx.drag.active = false;
+
+    var fab = ctx.fabEl;
+    fab.classList.remove('dragging');
+
+    // Kalau gak ada gerakan signifikan → anggap klik
+    if (!ctx.drag.moved) {
+      togglePopup();
+      return;
+    }
+
+    // Snap ke edge kiri/kanan
+    snapToEdge();
+    // Setelah snap, hide ke edge setelah delay
+    if (!ctx.isOpen) {
+      setTimeout(hideToEdge, 800);
+    }
+  }
+
+  function snapToEdge() {
+    var fab = ctx.fabEl;
+    var centerX = ctx.drag.fabX + ctx.drag.fabW / 2;
+    var vw = window.innerWidth;
+    var margin = 12;
+
+    // Tentukan snap ke kiri atau kanan
+    var snapLeft = margin;
+    var snapRight = vw - ctx.drag.fabW - margin;
+    var targetX = centerX < vw / 2 ? snapLeft : snapRight;
+
+    // Keep Y position, clamp ke viewport
+    var targetY = Math.max(margin, Math.min(ctx.drag.fabY, window.innerHeight - ctx.drag.fabH - margin));
+
+    ctx.drag.fabX = targetX;
+    ctx.drag.fabY = targetY;
+
+    fab.style.transition = 'left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    fab.style.left = targetX + 'px';
+    fab.style.top = targetY + 'px';
+
+    setTimeout(function () {
+      fab.style.transition = '';
+    }, 380);
+
+    // Update snap class buat popup positioning
+    fab.classList.toggle('snapped-left', targetX <= vw / 2);
+    fab.classList.toggle('snapped-right', targetX > vw / 2);
+
+    // Update popup kalau buka
+    if (ctx.isOpen) {
+      setTimeout(positionPopup, 380);
+    }
+  }
+
+  // ── Edge Hiding ──────────────────────────────────
+  function hideToEdge() {
+    if (ctx.isOpen || ctx.drag.active) return;
+    var fab = ctx.fabEl;
+    if (!fab) return;
+
+    var isLeft = fab.classList.contains('snapped-left');
+    var hideX;
+
+    if (isLeft) {
+      // Sembunyikan ke kiri — geser keluar layar kiri
+      hideX = -(ctx.drag.fabW * EDGE_HIDE_RATIO);
+    } else {
+      // Sembunyikan ke kanan — geser keluar layar kanan
+      hideX = window.innerWidth - ctx.drag.fabW * (1 - EDGE_HIDE_RATIO);
+    }
+
+    ctx.drag.fabX = hideX;
+    fab.style.transition = 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    fab.style.left = hideX + 'px';
+    fab.classList.add('edge-hidden');
+
+    setTimeout(function () {
+      fab.style.transition = '';
+    }, 420);
+  }
+
+  function slideOutFromEdge() {
+    var fab = ctx.fabEl;
+    if (!fab || !fab.classList.contains('edge-hidden')) return;
+
+    var isLeft = fab.classList.contains('snapped-left');
+    var vw = window.innerWidth;
+    var margin = 12;
+    var snapX = isLeft ? margin : (vw - ctx.drag.fabW - margin);
+
+    ctx.drag.fabX = snapX;
+    fab.style.transition = 'left 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
+    fab.style.left = snapX + 'px';
+    fab.classList.remove('edge-hidden');
+
+    setTimeout(function () {
+      fab.style.transition = '';
+    }, 380);
+  }
+
+  function scheduleEdgeHide() {
+    cancelEdgeHide();
+    edgeIdleTimer = setTimeout(function () {
+      hideToEdge();
+    }, IDLE_BEFORE_HIDE);
+  }
+
+  function cancelEdgeHide() {
+    if (edgeIdleTimer) {
+      clearTimeout(edgeIdleTimer);
+      edgeIdleTimer = null;
+    }
+  }
+
+  function resetIdleTimer() {
+    cancelEdgeHide();
+  }
+
+  // ── Popup Positioning ──────────────────────────
+  function positionPopup() {
+    var fab = ctx.fabEl;
+    var popup = ctx.popupEl;
+    if (!fab || !popup) return;
+
+    // Reset inline sizing — biar CSS yang handle height/maxHeight
+    popup.style.height = '';
+    popup.style.maxHeight = '';
+
+    var rect = fab.getBoundingClientRect();
+    var vw = window.innerWidth;
+    var isMobile = vw <= 480;
+
+    if (isMobile) {
+      // Mobile: full width, di atas FAB
+      popup.style.left = '0';
+      popup.style.right = '0';
+      popup.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      popup.style.top = 'auto';
+      popup.style.width = '100%';
+      popup.style.transformOrigin = 'bottom right';
+    } else {
+      var popupW = Math.min(400, vw - 32);
+      var popupMargin = 12;
+
+      // Tentukan popup di kiri atau kanan FAB
+      var fabCenterX = rect.left + rect.width / 2;
+      var popupLeft, popupRight;
+
+      if (fabCenterX < vw / 2) {
+        // FAB di kiri → popup di kanan FAB
+        popupLeft = rect.right + popupMargin;
+        popupRight = 'auto';
+        if (popupLeft + popupW > vw - 8) {
+          popupLeft = Math.max(8, rect.left - popupW - popupMargin);
+        }
+        if (popupLeft < 8) {
+          popupLeft = 8;
+          popupW = Math.min(popupW, vw - 16);
+        }
+      } else {
+        // FAB di kanan → popup di kiri FAB
+        popupLeft = 'auto';
+        popupRight = (vw - rect.left + popupMargin) + 'px';
+        var neededLeft = vw - parseFloat(popupRight) - popupW;
+        if (neededLeft < 8) {
+          popupRight = 'auto';
+          popupLeft = Math.max(8, rect.right + popupMargin);
+          if (popupLeft + popupW > vw - 8) {
+            popupLeft = 8;
+            popupW = Math.min(popupW, vw - 16);
+          }
+        }
+      }
+
+      // Vertical: popup muncul di atas FAB
+      var popupBottom = (window.innerHeight - rect.top + 8);
+
+      // Hanya set posisi, JANGAN override height/maxHeight — biar CSS default
+      popup.style.left = popupLeft === 'auto' ? 'auto' : popupLeft + 'px';
+      popup.style.right = popupRight === 'auto' ? 'auto' : popupRight + 'px';
+      popup.style.bottom = popupBottom + 'px';
+      popup.style.top = 'auto';
+      popup.style.width = popupW + 'px';
+
+      // transform-origin sesuai posisi
+      if (fabCenterX < vw / 2) {
+        popup.style.transformOrigin = 'bottom left';
+      } else {
+        popup.style.transformOrigin = 'bottom right';
+      }
+    }
+  }
+
   // ── Build DOM ───────────────────────────────────
   function buildUI() {
     if (ctx.fabEl) return;
@@ -151,7 +471,7 @@
     fab.id = 'g5aiFab';
     fab.title = 'G5 Assistant';
     fab.innerHTML = '<i class="fas fa-robot g5ai-fab-icon"></i><span class="g5ai-fab-badge" id="g5aiFabBadge">0</span>';
-    fab.onclick = togglePopup;
+    // Jangan pakai onclick langsung — drag handler akan handle klik
     document.body.appendChild(fab);
     ctx.fabEl = fab;
 
@@ -249,10 +569,17 @@
   }
 
   function openPopup() {
+    // Pastikan FAB keluar dari edge dulu
+    slideOutFromEdge();
+    cancelEdgeHide();
+
     ctx.isOpen = true;
     ctx.popupEl.style.display = 'flex';
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
+
+    // Position popup berdasarkan posisi FAB
+    setTimeout(positionPopup, 100);
 
     // Buat session_id konsisten sekali per sesi chat
     if (!ctx.sessionId) {
@@ -264,7 +591,7 @@
     }
     setTimeout(function () {
       $('g5aiInput').focus();
-    }, 100);
+    }, 150);
   }
 
   function closePopup() {
@@ -275,6 +602,8 @@
       ctx.popupEl.style.display = 'none';
       ctx.popupEl.classList.remove('closing');
       ctx.isOpen = false;
+      // Setelah tutup, hide FAB ke edge
+      scheduleEdgeHide();
     }, 250);
   }
 
@@ -559,6 +888,7 @@ function showFabIfAllowed() {
   // ── INIT ────────────────────────────────────────
   function init() {
     buildUI();
+    initDrag();
     watchDashboard();
     watchLoginState();
     console.log('[g5-ai] module loaded');

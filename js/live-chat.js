@@ -885,7 +885,9 @@
       // Hide G5 AI FAB when chat panel is active (avoid overlap)
       var isChatPanel = state && state.admin && state.admin.panel === 'chat';
       var g5Fab = document.querySelector('#g5aiFab');
-      if (g5Fab) g5Fab.style.display = isChatPanel ? 'none' : '';
+      if (g5Fab) {
+        if (isChatPanel) g5Fab.style.display = 'none';
+      }
 
       if (isChatPanel) {
         // Blokir viewer dari mengakses chat panel

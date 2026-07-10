@@ -181,21 +181,52 @@ function applySettings() {
   }
   if (s.hero_subline) { const p = document.querySelector('.hero-subline'); if (p) p.textContent = s.hero_subline; }
   if (s.hero_badge) { const hb = document.querySelector('.hero-badge-text'); if (hb) hb.textContent = s.hero_badge; }
-  if (s.footer_year) { const fy = document.querySelector('.footer-year'); if (fy) fy.textContent = s.footer_year; }
-  if (s.store_name || s.footer_text) { const fn = document.querySelector('.footer-store-name'); if (fn) fn.textContent = s.footer_text || s.store_name || ''; }
+  // Footer bottom — fully dynamic, gak ada lagi tahun/footer_text numpuk
+  var footerBottom = document.getElementById('footerBottom');
+  if (footerBottom) {
+    if (s.footer_text) {
+      footerBottom.innerHTML = '&copy; ' + esc(s.footer_text);
+    } else {
+      var fYear = s.footer_year || new Date().getFullYear();
+      var fStore = s.store_name || 'Gadget 5tore';
+      footerBottom.innerHTML = '&copy; ' + esc(String(fYear)) + ' ' + esc(fStore) + '. Semua hak dilindungi.';
+    }
+  }
   if (s.tagline) { const tg = document.querySelector('.footer-tagline'); if (tg) tg.textContent = s.tagline; }
+
+  // Helper: highlight angka di nama toko
+  function highlightDigits(text, accentClass) {
+    var m = text.match(/^(.*?)(\d+)(.*)$/);
+    if (m) return esc(m[1]) + '<span class="' + accentClass + '">' + esc(m[2]) + '</span>' + esc(m[3]);
+    return esc(text);
+  }
+
+  // Navbar logo — angka highlight otomatis
   if (s.store_name) {
     const logo = document.getElementById('pubLogoBtn');
     if (logo) {
       const name = s.store_name;
       const match = name.match(/^(.*?)(\d+)(.*)$/);
       if (match) {
-        logo.innerHTML = '<span>' + esc(match[1]) + '</span><span class="fv">' + esc(match[2]) + '</span><span class="rest">' + esc(match[3]) + '</span>';
+        // Trim spasi dari group1 — jarak dihandle CSS margin-left pada .fv
+        logo.innerHTML = '<span>' + esc(match[1].trimEnd()) + '</span><span class="fv">' + esc(match[2]) + '</span><span class="rest">' + esc(match[3].trimStart()) + '</span>';
       } else {
         logo.innerHTML = '<span>' + esc(name) + '</span>';
       }
     }
   }
+
+  // Footer brand (white area) — juga ikut update + angka highlight
+  if (s.store_name) {
+    const fb = document.querySelector('.footer-brand-text');
+    if (fb) fb.innerHTML = highlightDigits(s.store_name, 'footer-brand-accent');
+  }
+}
+// Initial apply saat pertama load (tanpa perlu Supabase atau navigasi)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { applySettings(); }, { once: true });
+} else {
+  applySettings();
 }
 function initSelectedBranch() {
   if (!state.db.branches.length) { state.session.selectedBranch = null; return; }
@@ -1449,7 +1480,7 @@ function pcardHtml(p, idx = 0) {
       : '';
   const delay = Math.min(Math.floor(idx / 4) * 80, 800);
   var askBtn = `<button class="pcard-ask-btn" onclick="event.stopPropagation();askProduct(${p.id})" title="Tanya tentang produk ini"><i class="fas fa-comment-dots"></i> Tanya Produk</button>`;
-  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms">${featBadge}<div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i class="fas fa-eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i class="fas fa-share-alt"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}${askBtn}</div></div>`;
+  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms"><div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${featBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i class="fas fa-eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i class="fas fa-share-alt"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}${askBtn}</div></div>`;
 }
 function askProduct(id) {
   var p = (state.db.products || []).find(function (x) { return x.id === id; });
@@ -1467,7 +1498,6 @@ function renderCatalog() {
   const activePromos = (state.db.promos || []).filter((p) => p.active);
   if (activePromos.length && ps) {
     ps.style.display = '';
-    ps.className = 'promo-section';
     ps.innerHTML = `<div class="promo-slider"><button class="promo-slider-btn prev" id="promoPrev"><i class="fas fa-chevron-left"></i></button><button class="promo-slider-btn next" id="promoNext"><i class="fas fa-chevron-right"></i></button><div class="promo-slider-track" id="promoSliderTrack">${activePromos.map((p, i) => `<div class="promo-slide" style="${p.image ? `background-image:url('${esc(p.image)}')` : 'background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)'}"><div class="promo-slide-body"><h3>${esc(p.title)}</h3><p>${esc(p.description || '')}</p></div></div>`).join('')}</div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
     setTimeout(initPromoSlider, 100);
   } else if (ps) { ps.style.display = 'none'; }
