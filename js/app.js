@@ -2761,16 +2761,7 @@ function renderSide() {
     h += `<div class="nav-item ${state.admin.panel === 'roles' ? 'active' : ''}" onclick="state.admin.panel='roles';renderSide();renderDash();closeSidebar()"><i class="fas fa-shield-alt"></i> Peran</div>`;
   h += `<div class="nav-item ${state.admin.panel === 'activity' ? 'active' : ''}" onclick="state.admin.panel='activity';renderSide();renderDash();closeSidebar()"><i class="fas fa-history"></i> Aktivitas</div>`;
   n.innerHTML = h;
-  if (state.session.currentUser) {
-    const ini =
-      (state.session.currentUser.display_name || '')
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'U';
-    f.innerHTML = `<div class="avatar">${ini}</div><div class="side-foot-info"><div>${esc(state.session.currentUser.display_name)}</div><div>${esc(ROLES[state.session.currentUser.role]?.label || state.session.currentUser.role)}</div></div>`;
-  }
+  f.innerHTML = '';
   renderMobBottomNav();
 }
 function renderMobBottomNav() {

@@ -18,11 +18,7 @@
   // ── Config ──────────────────────────────────────
   var N8N_G5_AI_URL = (typeof window.N8N_G5_AI_URL !== 'undefined') ? window.N8N_G5_AI_URL : '';
   var AI_NAME = 'G5 AI';
-  var WELCOME_CHIPS = [
-    'Stok produk apa yang kurang?',
-    'Buat ringkasan penjualan',
-    'Tips meningkatkan penjualan',
-  ];
+  var WELCOME_CHIPS = [];
 
   // ── Internal State ──────────────────────────────
   const ctx = {
@@ -58,6 +54,93 @@
     return role === 'admin' || role === 'editor';
   }
 
+  // ── Demo Questions ─────────────────────────────
+  var DEMO_QUESTIONS = [
+    { cat: '📊 Baca Data Produk', items: [
+      'Berapa total produk di toko saya?',
+      'Produk apa saja yang stoknya habis?',
+      'Produk mana yang stoknya di bawah 5?',
+      'Produk apa saja di kategori Smartphone?',
+      'Produk mana yang sedang diskon?',
+    ]},
+    { cat: '📈 Analisa Produk', items: [
+      'Kategori apa yang punya produk paling banyak?',
+      'Rata-rata harga produk per kategori berapa?',
+      'Produk mana yang harganya di atas rata-rata?',
+      'Celah kategori apa yang belum ada produknya?',
+    ]},
+    { cat: '🏷️ Promo — Baca', items: [
+      'Promo apa saja yang sedang aktif?',
+      'Promo apa saja yang sudah nonaktif?',
+      'Detail promo Flash Sale Weekend apa?',
+    ]},
+    { cat: '🏷️ Promo — Buat/Ubah', items: [
+      'Buat promo "Flash Sale Weekend" diskon 20% untuk semua HP',
+      'Buat promo "Gratis Ongkir" dengan deskripsi menarik',
+      'Ubah deskripsi promo Flash Sale Weekend jadi lebih menarik',
+      'Nonaktifkan promo Flash Sale Weekend yang udah selesai',
+      'Buat promo "Trade-In" dengan syarat tukar gadget lama',
+    ]},
+    { cat: '📝 Deskripsi Produk', items: [
+      'Buatkan deskripsi menarik untuk produk Samsung Galaxy S24 Ultra',
+      'Perbaiki deskripsi semua produk di kategori Aksesoris jadi lebih menarik',
+    ]},
+    { cat: '⚙️ Setting & Cabang', items: [
+      'Ubah tagline toko jadi "Gadget Terlengkap dengan Harga Terbaik"',
+      'Update jam operasional cabang Gadget 5tore Jakarta (Utama) jadi Senin-Jumat 08.00-21.00, Sabtu-Minggu 09.00-18.00',
+      'Dimana saja lokasi cabang toko?',
+    ]},
+    { cat: '💡 Rekomendasi & Insight', items: [
+      'Produk mana yang sebaiknya dipromokan minggu ini berdasarkan stok terbanyak?',
+      'Bandingkan harga Samsung Galaxy S24 Ultra dan iPhone 15 Pro Max, mana yang lebih worth it?',
+      'Rekomendasi 3 produk terbaik untuk customer budget 2-3 juta',
+    ]},
+  ];
+
+  var demoPickerOpen = false;
+
+  function toggleDemoPicker() {
+    var dd = $('g5aiDemoPicker');
+    if (!dd) return;
+    demoPickerOpen = !demoPickerOpen;
+    dd.classList.toggle('g5ai-demo-open', demoPickerOpen);
+    if (demoPickerOpen) {
+      // scroll to top of list
+      dd.scrollTop = 0;
+    }
+  }
+
+  function closeDemoPicker() {
+    var dd = $('g5aiDemoPicker');
+    if (dd) dd.classList.remove('g5ai-demo-open');
+    demoPickerOpen = false;
+  }
+
+  function pickDemoQuestion(text) {
+    var input = $('g5aiInput');
+    if (input) {
+      input.value = text;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      input.focus();
+    }
+    closeDemoPicker();
+  }
+
+  function buildDemoPickerHTML() {
+    var html = '<div class="g5ai-demo-picker" id="g5aiDemoPicker">';
+    html += '<div class="g5ai-demo-search"><i class="fas fa-search"></i><input type="text" id="g5aiDemoSearch" placeholder="Cari pertanyaan..."></div>';
+    html += '<div class="g5ai-demo-list" id="g5aiDemoList">';
+    DEMO_QUESTIONS.forEach(function (group) {
+      html += '<div class="g5ai-demo-cat">' + esc(group.cat) + '</div>';
+      group.items.forEach(function (q) {
+        html += '<button class="g5ai-demo-item" data-q="' + esc(q).replace(/"/g, '&quot;') + '">' + esc(q) + '</button>';
+      });
+    });
+    html += '</div></div>';
+    return html;
+  }
+
   // ── Build DOM ───────────────────────────────────
   function buildUI() {
     if (ctx.fabEl) return;
@@ -84,8 +167,10 @@
       + '<div class="g5ai-header-name">' + esc(AI_NAME) + '</div>'
       + '<div class="g5ai-header-status"><span class="g5ai-status-dot"></span> Online</div>'
       + '</div>'
+      + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i class="fas fa-list-check"></i></button>'
       + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i class="fas fa-trash-alt"></i></button>'
       + '</div>'
+      + buildDemoPickerHTML()
       + '<div class="g5ai-messages" id="g5aiMessages"></div>'
       + '<div class="g5ai-input-area">'
       + '<textarea class="g5ai-input" id="g5aiInput" placeholder="Tanya apa saja tentang toko..." rows="1"></textarea>'
@@ -95,7 +180,7 @@
     ctx.popupEl = popup;
 
     // Events
-    $('g5aiSendBtn').onclick = sendMessage;
+    $('g5aiSendBtn').onclick = function () { sendMessage(); };
     $('g5aiInput').onkeydown = function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     };
@@ -104,6 +189,52 @@
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
     };
     $('g5aiClearBtn').onclick = clearChat;
+
+    // Demo picker events
+    $('g5aiDemoBtn').onclick = function (e) {
+      e.stopPropagation();
+      toggleDemoPicker();
+    };
+    $('g5aiDemoList').addEventListener('click', function (e) {
+      var item = e.target.closest('.g5ai-demo-item');
+      if (item) {
+        pickDemoQuestion(item.getAttribute('data-q'));
+      }
+    });
+    $('g5aiDemoSearch').addEventListener('input', function () {
+      var q = this.value.toLowerCase();
+      var items = $('g5aiDemoList').querySelectorAll('.g5ai-demo-item');
+      var cats = $('g5aiDemoList').querySelectorAll('.g5ai-demo-cat');
+      var lastCatIdx = -1;
+      items.forEach(function (item) {
+        var show = !q || item.getAttribute('data-q').toLowerCase().indexOf(q) !== -1;
+        item.style.display = show ? '' : 'none';
+        if (show) {
+          // show parent category
+          var prev = item.previousElementSibling;
+          while (prev) {
+            if (prev.classList.contains('g5ai-demo-cat')) { prev.style.display = ''; break; }
+            prev = prev.previousElementSibling;
+          }
+        }
+      });
+      // hide empty categories
+      cats.forEach(function (cat) {
+        var next = cat.nextElementSibling;
+        var hasVisible = false;
+        while (next && !next.classList.contains('g5ai-demo-cat')) {
+          if (next.style.display !== 'none') { hasVisible = true; break; }
+          next = next.nextElementSibling;
+        }
+        cat.style.display = hasVisible ? '' : 'none';
+      });
+    });
+    // close demo picker when clicking outside
+    document.addEventListener('click', function (e) {
+      if (demoPickerOpen && !e.target.closest('.g5ai-demo-picker') && !e.target.closest('#g5aiDemoBtn')) {
+        closeDemoPicker();
+      }
+    });
   }
 
   // ── Toggle Popup ────────────────────────────────
@@ -135,6 +266,7 @@
   }
 
   function closePopup() {
+    closeDemoPicker();
     ctx.popupEl.classList.add('closing');
     ctx.fabEl.classList.remove('open');
     setTimeout(function () {
@@ -195,7 +327,7 @@
     if (ctx.isSending) return;
 
     var input = $('g5aiInput');
-    var msg = text || (input ? input.value.trim() : '');
+    var msg = (typeof text === 'string' && text) || (input ? input.value.trim() : '');
     if (!msg) return;
 
     if (input) { input.value = ''; input.style.height = 'auto'; }
@@ -232,6 +364,28 @@
         });
 
     try {
+      // Build store data context
+      var db = (state && state.db) || {};
+      var products = (db.products || []).map(function (p) {
+        return {
+          id: p.id, name: p.name, brand: p.brand, category: p.category,
+          price: p.price, discount_price: p.discount_price, discount_percent: p.discount_percent,
+          stock: p.stock, sold: p.sold || 0, featured: p.featured, archived: p.archived,
+          description: p.description,
+          images: (p.images || []).length,
+          variants: (p.variants || []).map(function (v) { return { name: v.name, diff: v.diff, stock: v.stock }; }),
+        };
+      });
+      var promos = (db.promos || []).map(function (p) {
+        return { id: p.id, title: p.title, description: p.description, active: p.active, sort_order: p.sort_order };
+      });
+      var branches = (db.branches || []).map(function (b) {
+        return { id: b.id, name: b.name, is_default: b.is_default, address: b.address, phone: b.phone, wa_numbers: b.wa_numbers, hours: b.hours };
+      });
+      var settings = db.settings || {};
+      var cats = [];
+      products.forEach(function (p) { if (p.category && cats.indexOf(p.category) === -1) cats.push(p.category); });
+
       var res = await fetch(N8N_G5_AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -240,9 +394,21 @@
           session_id: ctx.sessionId,
           history: history,
           context: {
-            store_name: (state && state.db && state.db.settings && state.db.settings.store_name) || 'Gadget 5tore',
+            store_name: settings.store_name || 'Gadget 5tore',
             role: (state && state.session && state.session.currentUser && state.session.currentUser.role) || 'viewer',
             display_name: (state && state.session && state.session.currentUser && state.session.currentUser.display_name) || '',
+            store_data: {
+              products: products,
+              categories: cats,
+              promos: promos,
+              branches: branches,
+              settings: {
+                tagline: settings.tagline || '',
+                description: settings.description || '',
+                whatsapp: settings.whatsapp || '',
+                footer_text: settings.footer_text || '',
+              },
+            }
           }
         })
       });

@@ -80,7 +80,7 @@
 }
 
 /* Per-role accent colors */
-.presence-group--admin .presence-count { background: linear-gradient(135deg, #C8A44E, #8E6D1E); }
+.presence-group--admin .presence-count { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); }
 .presence-group--editor .presence-count { background: linear-gradient(135deg, #4F46E5, #312E81); }
 .presence-group--viewer .presence-count { background: linear-gradient(135deg, #6B7280, #374151); }
 
@@ -199,11 +199,11 @@ body.dark .presence-popover {
 }
 
 body.dark .presence-popover-item:hover {
-  background: rgba(200,164,78,0.08);
+  background: rgba(var(--accent-rgb),0.08);
 }
 
 body.dark .presence-popover-item.is-me {
-  background: rgba(200,164,78,0.1);
+  background: rgba(var(--accent-rgb),0.1);
 }
 
 body.dark .presence-popover-name { color: #fff; }
