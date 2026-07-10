@@ -3,9 +3,14 @@
   const $ = (id) => document.getElementById(id);
   const scrollToEl = (el) => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
   $('pubLogoBtn')?.addEventListener('click', () => { onLogoTripleClick(); });
-  $('navProduk')?.addEventListener('click', () => { const search = $('catSearch'); if (search) { search.focus(); scrollToEl(search); } });
-  $('navPromo')?.addEventListener('click', () => { scrollToEl($('promoSection')); });
-  $('navTentang')?.addEventListener('click', () => { const footer = document.querySelector('.cat-footer'); if (footer) footer.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  function setActiveNav(id) {
+    document.querySelectorAll('.pub-nav-link').forEach(b => b.classList.remove('active'));
+    const btn = $(id);
+    if (btn) btn.classList.add('active');
+  }
+  $('navProduk')?.addEventListener('click', () => { setActiveNav('navProduk'); const search = $('catSearch'); if (search) { search.focus(); scrollToEl(search); } });
+  $('navPromo')?.addEventListener('click', () => { setActiveNav('navPromo'); scrollToEl($('promoSection')); });
+  $('navTentang')?.addEventListener('click', () => { setActiveNav('navTentang'); const footer = document.querySelector('.cat-footer'); if (footer) footer.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('navSearchBtn')?.addEventListener('click', () => { const search = $('catSearch'); if (search) { search.focus(); scrollToEl(search); } });
   $('navWaBtn')?.addEventListener('click', () => { window.open('https://wa.me/', '_blank'); });
   $('themeToggleBtn')?.addEventListener('click', toggleTheme);
