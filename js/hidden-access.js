@@ -69,7 +69,7 @@
       key: 'admin',
       label: 'Admin',
       desc: 'Akses penuh ke seluruh modul dashboard',
-      icon: 'fas fa-user-shield',
+      icon: 'user-shield',
       accent: 'admin',
       demoUser: 'admin',
       demoPass: 'admin123',
@@ -78,7 +78,7 @@
       key: 'editor',
       label: 'Editor',
       desc: 'Kelola produk, cabang & promo',
-      icon: 'fas fa-user-pen',
+      icon: 'user-pen',
       accent: 'editor',
       demoUser: 'editor1',
       demoPass: 'editor123',
@@ -97,11 +97,11 @@
       <div class="access-card" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
         <button class="detail-close access-close-btn" id="accessCloseBtn"
                 aria-label="Tutup" title="Tutup">
-          <i class="fas fa-times"></i>
+          <i data-lucide="x"></i>
         </button>
 
         <div class="access-head">
-          <div class="access-head-icon"><i class="fas fa-shield-halved"></i></div>
+          <div class="access-head-icon"><i data-lucide="shield"></i></div>
           <h2 id="accessTitle">Pilih Akses</h2>
           <p>Pilih jenis akun yang ingin Anda gunakan</p>
         </div>
@@ -137,12 +137,12 @@
     return `
       <button type="button" class="role-card role-card--${r.accent}"
               data-role-key="${r.key}">
-        <div class="role-card-icon"><i class="${r.icon}"></i></div>
+        <div class="role-card-icon"><i data-lucide="${r.icon}"></i></div>
         <div class="role-card-body">
           <div class="role-card-title">${r.label}</div>
           <div class="role-card-desc">${r.desc}</div>
         </div>
-        <div class="role-card-arrow"><i class="fas fa-arrow-right"></i></div>
+        <div class="role-card-arrow"><i data-lucide="arrow-right"></i></div>
         <div class="role-card-shine"></div>
       </button>
     `;
@@ -247,7 +247,7 @@
     wrapper.innerHTML = `
       <div class="login-or-divider"><span>atau</span></div>
       <button class="btn btn-ghost login-visitor-btn" id="loginVisitorBtn" type="button">
-        <i class="fas fa-eye"></i>
+        <i data-lucide="eye"></i>
         <span>Masuk sebagai Pengunjung</span>
       </button>
     `;

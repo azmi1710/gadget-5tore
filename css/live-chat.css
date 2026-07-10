@@ -152,7 +152,7 @@
   font-size: 14px;
   font-weight: 700;
   color: #fff;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Outfit', sans-serif;
   letter-spacing: -0.2px;
   line-height: 1.2;
 }
@@ -276,7 +276,7 @@
   font-size: 17px;
   font-weight: 800;
   color: var(--fg, #1B1611);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Outfit', sans-serif;
   margin: 0;
 }
 
@@ -302,7 +302,7 @@
   border-radius: 12px;
   padding: 11px 14px;
   font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   background: var(--bg, #F4F1EA);
   outline: none;
@@ -322,7 +322,7 @@
   color: #fff;
   font-size: 14px;
   font-weight: 700;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 14px rgba(21, 128, 61, 0.25);
@@ -505,7 +505,7 @@
   border-radius: 14px;
   padding: 11px 16px;
   font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   background: var(--bg, #F4F1EA);
   resize: none;
@@ -626,7 +626,7 @@
   color: var(--muted, #6E6A5E);
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -879,7 +879,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .lc-takeover-btn:hover {
@@ -904,7 +904,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .lc-close-session-btn:hover {
@@ -939,7 +939,7 @@
   border-radius: 14px;
   padding: 10px 14px;
   font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   background: var(--bg, #F4F1EA);
   resize: none;
@@ -1258,7 +1258,7 @@ body.dark .lc-inbox-input::placeholder { color: rgba(255, 255, 255, 0.3); }
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .lc-inbox-history-clear:hover {
@@ -1279,7 +1279,7 @@ body.dark .lc-inbox-input::placeholder { color: rgba(255, 255, 255, 0.3); }
   color: var(--muted, #6E6A5E);
   font-size: 10px;
   font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -1355,7 +1355,7 @@ body.dark .lc-inbox-history-clear:hover {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 500;
   animation: g5aFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .g5a-fab:hover {
@@ -1386,7 +1386,7 @@ body.dark .lc-inbox-history-clear:hover {
   flex-direction: column;
   overflow: hidden;
   z-index: 501;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .g5a-popup.open { display: flex; animation: g5aPopIn 0.25s ease-out; }
@@ -1533,7 +1533,7 @@ body.dark .lc-inbox-history-clear:hover {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
 
@@ -1588,7 +1588,7 @@ body.dark .lc-inbox-history-clear:hover {
   border-radius: 14px;
   padding: 10px 14px;
   font-size: 13px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   background: var(--bg, #F4F1EA);
   resize: none;
@@ -1713,7 +1713,7 @@ body.dark .g5a-input::placeholder { color: rgba(255, 255, 255, 0.3); }
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 .pcard-ask-btn:hover {
   border-color: var(--accent, #D9503F);

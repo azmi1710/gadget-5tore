@@ -157,13 +157,13 @@ const BRAND_COLORS = {
 };
 const CAT_SLUGS = { Samsung: 'samsung', Xiaomi: 'xiaomi', OPPO: 'oppo', VIVO: 'vivo' };
 function getCatIconHtml(cat, s = '13px') {
-  if (cat === 'Semua') return `<i class="fas fa-th" style="font-size:${s}"></i>`;
+  if (cat === 'Semua') return `<i data-lucide="grid-3x3" style="font-size:${s}"></i>`;
   if (cat === 'iPhone') return `<i class="fab fa-apple" style="font-size:${s}"></i>`;
-  if (cat === 'Gaming Phone') return `<i class="fas fa-gamepad" style="font-size:${s}"></i>`;
+  if (cat === 'Gaming Phone') return `<i data-lucide="gamepad-2" style="font-size:${s}"></i>`;
   const slug = CAT_SLUGS[cat];
   if (slug)
     return `<img src="https://cdn.simpleicons.org/${slug}" alt="${esc(cat)}" style="height:${s};width:auto;object-fit:contain;">`;
-  return `<i class="fas fa-mobile-alt" style="font-size:${s}"></i>`;
+  return `<i data-lucide="smartphone" style="font-size:${s}"></i>`;
 }
 
 function getBrandHtml(b, s = '14px') { const h = parseInt(s); return `<span style="display:inline-flex;align-items:center;font-size:${Math.max(h - 2, 10)}px;font-weight:700;color:var(--fg);letter-spacing:.3px">${esc(b)}</span>`; }
@@ -176,11 +176,11 @@ const SOCIAL_PLATFORMS = {
   threads: { icon: 'fab fa-threads', color: '#FFFFFF', label: 'Threads' },
   whatsapp: { icon: 'fab fa-whatsapp', color: '#25D366', label: 'WhatsApp' },
   telegram: { icon: 'fab fa-telegram-plane', color: '#0088cc', label: 'Telegram' },
-  shopee: { icon: 'fas fa-store', color: '#EE4D2D', label: 'Shopee' },
-  tokopedia: { icon: 'fas fa-shopping-cart', color: '#42B549', label: 'Tokopedia' },
-  website: { icon: 'fas fa-globe', color: '#555555', label: 'Website' },
+  shopee: { icon: 'store', color: '#EE4D2D', label: 'Shopee' },
+  tokopedia: { icon: 'shopping-cart', color: '#42B549', label: 'Tokopedia' },
+  website: { icon: 'globe', color: '#555555', label: 'Website' },
 };
-function getSocialIcon(platform) { const p = SOCIAL_PLATFORMS[platform]; return p ? `<i class="${p.icon}" style="color:${p.color}"></i>` : `<i class="fas fa-link"></i>`; }
+function getSocialIcon(platform) { const p = SOCIAL_PLATFORMS[platform]; if (!p) return '<i data-lucide="link"></i>'; const ic = p.icon; const isFa = ic.startsWith('fab') || ic.startsWith('fas'); return isFa ? `<i class="${ic}" style="color:${p.color}"></i>` : `<i data-lucide="${ic}" style="color:${p.color}"></i>`; }
 function getSocialLabel(platform) { return SOCIAL_PLATFORMS[platform]?.label || platform; }
 function getSocialColor(platform) { return SOCIAL_PLATFORMS[platform]?.color || '#555'; }
 function fbProducts() { return []; }
@@ -296,6 +296,6 @@ function fbCategories() {
     { id: 3, name: 'Xiaomi', slug: 'xiaomi', icon_type: 'simpleicons', icon_value: 'xiaomi', sort_order: 2, active: true },
     { id: 4, name: 'OPPO', slug: 'oppo', icon_type: 'simpleicons', icon_value: 'oppo', sort_order: 3, active: true },
     { id: 5, name: 'VIVO', slug: 'vivo', icon_type: 'simpleicons', icon_value: 'vivo', sort_order: 4, active: true },
-    { id: 6, name: 'Gaming Phone', slug: 'gaming-phone', icon_type: 'fontawesome', icon_value: 'fas fa-gamepad', sort_order: 5, active: true },
+    { id: 6, name: 'Gaming Phone', slug: 'gaming-phone', icon_type: 'lucide', icon_value: 'gamepad-2', sort_order: 5, active: true },
   ];
 }

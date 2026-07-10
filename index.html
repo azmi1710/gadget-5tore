@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="5ive Store - Pusat handphone & smartphone terlengkap. Harga terbaik, produk original, Jakarta Pusat.">
   <title>Gadget 5tore - Pusat Handphone & Smartphone</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' font-weight='900' fill='%23D9503F'%3E5%3C/text%3E%3C/svg%3E">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%22100%22%20y2%3D%22100%22%20gradientUnits%3D%22userSpaceOnUse%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%23D9503F%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23C8A44E%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2220%22%20fill%3D%22url%28%23g%29%22%2F%3E%0A%20%20%3Ctext%20x%3D%2250%22%20y%3D%2273%22%20text-anchor%3D%22middle%22%20font-family%3D%22system-ui%2Csans-serif%22%20font-size%3D%2260%22%20font-weight%3D%22900%22%20fill%3D%22white%22%3E5%3C%2Ftext%3E%0A%3C%2Fsvg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
@@ -44,17 +45,17 @@
     <span>Gadget </span><span class="fv">5</span><span class="rest">tore</span>
   </div>
   <div class="pub-nav-center">
-    <button class="pub-nav-link active" id="navProduk"><i class="fas fa-th-large nav-link-icon"></i>Produk</button>
-    <button class="pub-nav-link" id="navPromo"><i class="fas fa-tags nav-link-icon"></i>Promo</button>
-    <button class="pub-nav-link" id="navTentang"><i class="fas fa-info-circle nav-link-icon"></i>Tentang</button>
+    <button class="pub-nav-link active" id="navProduk"><i data-lucide="layout-grid" class="nav-link-icon"></i>Produk</button>
+    <button class="pub-nav-link" id="navPromo"><i data-lucide="tags" class="nav-link-icon"></i>Promo</button>
+    <button class="pub-nav-link" id="navTentang"><i data-lucide="info" class="nav-link-icon"></i>Tentang</button>
   </div>
   <div class="pub-right" id="pubRight">
-    <button class="pub-nav-search" id="navSearchBtn" title="Cari produk"><i class="fas fa-search"></i></button>
+    <button class="pub-nav-search" id="navSearchBtn" title="Cari produk"><i data-lucide="search"></i></button>
     <button class="pub-nav-wa" id="navWaBtn"><i class="fab fa-whatsapp"></i> Hubungi</button>
     <button class="btn btn-ghost btn-sm" id="themeToggleBtn" title="Ganti Tema">
-      <i class="fas fa-moon"></i>
+      <i data-lucide="moon"></i>
     </button>
-    <button class="btn btn-primary btn-sm" id="loginBtn"><i class="fas fa-lock"></i> Login</button>
+    <button class="btn btn-primary btn-sm" id="loginBtn"><i data-lucide="lock"></i> Login</button>
   </div>
 </nav>
 
@@ -62,16 +63,16 @@
   <div class="hero-main">
     <div class="hero-glow"></div>
     <div class="hero-inner">
-      <div class="hero-badge"><i class="fas fa-bolt"></i> <span class="hero-badge-text">Gadget Terpercaya Sejak 2025</span></div>
+      <div class="hero-badge"><i data-lucide="zap"></i> <span class="hero-badge-text">Gadget Terpercaya Sejak 2025</span></div>
       <h1 class="hero-headline">Temukan <span>Gadget Impianmu</span></h1>
       <p class="hero-subline">Ratusan produk original dari brand ternama dengan harga terbaik dan garansi resmi.</p>
       <div class="hero-search-wrap">
         <div class="hero-search">
-          <i class="fas fa-search"></i>
+          <i data-lucide="search"></i>
           <input type="text" placeholder="Cari produk, merek, atau kategori..." id="catSearch">
         </div>
         <button class="hero-filter-btn" id="filterToggle" title="Filter">
-          <i class="fas fa-sliders-h"></i>
+          <i data-lucide="sliders-horizontal"></i>
         </button>
       </div>
       <div class="hero-filter" id="filterPanel" style="display:none">
@@ -90,7 +91,7 @@
           <input class="hfilter-input" type="number" id="filterPriceMin" placeholder="Min">
           <span class="hfilter-dash">–</span>
           <input class="hfilter-input" type="number" id="filterPriceMax" placeholder="Max">
-          <button class="hfilter-reset" id="filterResetBtn" title="Reset"><i class="fas fa-undo"></i></button>
+          <button class="hfilter-reset" id="filterResetBtn" title="Reset"><i data-lucide="rotate-ccw"></i></button>
         </div>
       </div>
       <div class="hero-ticker">
@@ -99,10 +100,10 @@
         </div>
       </div>
       <div class="hero-trust">
-        <div class="ht-item"><i class="fas fa-shield-alt"></i> Original</div>
-        <div class="ht-item"><i class="fas fa-medal"></i> Garansi Resmi</div>
-        <div class="ht-item"><i class="fas fa-headset"></i> Support 24/7</div>
-        <div class="ht-item"><i class="fas fa-shipping-fast"></i> Kirim Cepat</div>
+        <div class="ht-item"><i data-lucide="shield-check"></i> Original</div>
+        <div class="ht-item"><i data-lucide="award"></i> Garansi Resmi</div>
+        <div class="ht-item"><i data-lucide="headset"></i> Support 24/7</div>
+        <div class="ht-item"><i data-lucide="truck"></i> Kirim Cepat</div>
       </div>
     </div>
   </div>
@@ -114,14 +115,14 @@
     <div class="explore-tabs" id="exploreTabs"></div>
     <div class="explore-content" id="exploreContent"></div>
   </div>
-  <div class="cat-section-head"><h2><i class="fas fa-th-large"></i> Semua Produk</h2><div class="cat-section-line"></div></div>
+  <div class="cat-section-head"><h2><i data-lucide="layout-grid"></i> Semua Produk</h2><div class="cat-section-line"></div></div>
   <div class="cat-bar">
     <div class="cat-count">
-      <i class="fas fa-box-open cat-count-icon"></i>Menampilkan <strong id="catCount">0</strong> produk
+      <i data-lucide="package-open" class="cat-count-icon"></i>Menampilkan <strong id="catCount">0</strong> produk
     </div>
     <div class="cat-controls">
       <div class="cat-sort">
-        <i class="fas fa-sort-amount-down cat-sort-icon"></i>
+        <i data-lucide="arrow-down-wide-narrow" class="cat-sort-icon"></i>
         <select id="catSort">
           <option value="newest">Terbaru</option>
           <option value="price-asc">Harga Terendah</option>
@@ -132,8 +133,8 @@
         </select>
       </div>
       <div class="cat-view-toggle">
-        <button class="view-toggle-btn active" id="viewGrid" title="Grid"><i class="fas fa-th"></i></button>
-        <button class="view-toggle-btn" id="viewList" title="List"><i class="fas fa-list"></i></button>
+        <button class="view-toggle-btn active" id="viewGrid" title="Grid"><i data-lucide="grid-3x3"></i></button>
+        <button class="view-toggle-btn" id="viewList" title="List"><i data-lucide="list"></i></button>
       </div>
     </div>
   </div>
@@ -144,7 +145,7 @@
 
     <div class="ft-main-grid">
       <div class="ft-section ft-reviews-section">
-        <h3><i class="fas fa-quote-left"></i> Apa Kata Mereka <span class="reviews-count-badge" id="revCountBadge">0</span></h3>
+        <h3><i data-lucide="quote"></i> Apa Kata Mereka <span class="reviews-count-badge" id="revCountBadge">0</span></h3>
         <div class="ft-rating-summary">
           <div class="ft-rating-big" id="ftRatingBig">0</div>
           <div class="ft-rating-right">
@@ -154,20 +155,20 @@
         </div>
         <div class="ft-bars-wrap" id="ftBarsWrap"></div>
         <div class="reviews-collapse-wrap" id="reviewsWrap"><div id="reviewList"></div></div>
-        <button class="reviews-toggle" id="reviewsToggle"><span id="reviewsToggleText">Lihat Semua Ulasan</span><i class="fas fa-chevron-down"></i></button>
-        <button class="form-toggle-btn" id="formToggleBtn"><i class="fas fa-pen"></i> Tulis Ulasan</button>
+        <button class="reviews-toggle" id="reviewsToggle"><span id="reviewsToggleText">Lihat Semua Ulasan</span><i data-lucide="chevron-down"></i></button>
+        <button class="form-toggle-btn" id="formToggleBtn"><i data-lucide="pencil"></i> Tulis Ulasan</button>
         <div class="review-form-wrap" id="reviewFormWrap">
           <div class="review-form" id="reviewForm">
-            <h4><i class="fas fa-pen"></i> Tulis Ulasan Anda</h4>
+            <h4><i data-lucide="pencil"></i> Tulis Ulasan Anda</h4>
             <div class="form-group"><label class="form-label">Nama</label><input class="form-input review-form-input" id="revName" placeholder="Nama kamu"></div>
-            <div class="form-group"><label class="form-label">Rating</label><div class="star-pick" id="starPick"><i class="fas fa-star active" data-v="1"></i><i class="fas fa-star active" data-v="2"></i><i class="fas fa-star active" data-v="3"></i><i class="fas fa-star active" data-v="4"></i><i class="fas fa-star active" data-v="5"></i></div></div>
+            <div class="form-group"><label class="form-label">Rating</label><div class="star-pick" id="starPick"><i data-lucide="star" class="active" data-v="1"></i><i data-lucide="star" class="active" data-v="2"></i><i data-lucide="star" class="active" data-v="3"></i><i data-lucide="star" class="active" data-v="4"></i><i data-lucide="star" class="active" data-v="5"></i></div></div>
             <div class="form-group"><label class="form-label">Ulasan</label><textarea class="form-input review-form-input" id="revComment" placeholder="Bagaimana pengalaman belanja kamu?" rows="3"></textarea></div>
             <div class="form-group"><label class="form-label">Foto (opsional)</label>
-              <div class="review-upload review-form-input" id="revUploadArea"><i class="fas fa-camera"></i><p>Tambah foto</p></div>
+              <div class="review-upload review-form-input" id="revUploadArea"><i data-lucide="camera"></i><p>Tambah foto</p></div>
               <input type="file" id="revFileIn" accept="image/*" class="hidden-file-input">
               <div class="review-photos-preview" id="revPhotosPreview"></div>
             </div>
-            <button class="btn btn-primary btn-sm" id="submitReviewBtn"><i class="fas fa-paper-plane"></i> Kirim Ulasan</button>
+            <button class="btn btn-primary btn-sm" id="submitReviewBtn"><i data-lucide="send"></i> Kirim Ulasan</button>
           </div>
         </div>
       </div>
@@ -213,28 +214,28 @@
 <div class="qv-overlay" id="qvOverlay"><div class="qv-card" id="qvCard"></div></div>
 
 <div class="detail-overlay" id="detailOverlay">
-  <div class="detail-wrap"><div class="detail-box" id="detailBox"></div><button class="detail-close" id="detailCloseBtn" aria-label="Tutup detail"><i class="fas fa-times"></i></button></div>
+  <div class="detail-wrap"><div class="detail-box" id="detailBox"></div><button class="detail-close" id="detailCloseBtn" aria-label="Tutup detail"><i data-lucide="x"></i></button></div>
 </div>
 <div class="admin-detail-overlay" id="adminDetailOverlay">
-  <div class="detail-wrap"><div class="admin-detail-box" id="adminDetailBox"></div><button class="detail-close" id="adminDetailCloseBtn" aria-label="Tutup detail"><i class="fas fa-times"></i></button></div>
+  <div class="detail-wrap"><div class="admin-detail-box" id="adminDetailBox"></div><button class="detail-close" id="adminDetailCloseBtn" aria-label="Tutup detail"><i data-lucide="x"></i></button></div>
 </div>
 
 <div class="modal-bg" id="loginModal">
   <div class="login-card">
-    <button class="detail-close login-close-btn" id="loginCloseBtn" title="Batal" aria-label="Tutup login"><i class="fas fa-times"></i></button>
+    <button class="detail-close login-close-btn" id="loginCloseBtn" title="Batal" aria-label="Tutup login"><i data-lucide="x"></i></button>
     <div class="login-head">
       <img class="login-logo-img" src="" alt="Gadget 5tore" id="loginLogoImg">
       <h2>Login Admin</h2>
       <p>Masuk untuk mengelola toko</p>
     </div>
     <div class="login-body">
-      <div class="form-group"><label class="form-label">Username</label><i class="fas fa-user input-icon"></i><input class="form-input" id="loginUser" placeholder="Masukkan username" autocomplete="off"></div>
-      <div class="form-group"><label class="form-label">Password</label><i class="fas fa-lock input-icon"></i><input class="form-input" id="loginPass" type="password" placeholder="Masukkan password"></div>
+      <div class="form-group"><label class="form-label">Username</label><i data-lucide="user" class="input-icon"></i><input class="form-input" id="loginUser" placeholder="Masukkan username" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Password</label><i data-lucide="lock" class="input-icon"></i><input class="form-input" id="loginPass" type="password" placeholder="Masukkan password"></div>
       <div class="login-err" id="loginErr">Username atau password salah</div>
-      <button class="btn btn-primary" id="doLoginBtn"><i class="fas fa-sign-in-alt login-btn-icon"></i> Masuk</button>
+      <button class="btn btn-primary" id="doLoginBtn"><i data-lucide="log-in" class="login-btn-icon"></i> Masuk</button>
       <div class="login-visitor-wrap">
         <div class="login-or-divider"><span>atau</span></div>
-        <button class="login-visitor-btn" id="loginVisitorBtn"><i class="fas fa-eye"></i> Masuk sebagai Pengunjung</button>
+        <button class="login-visitor-btn" id="loginVisitorBtn"><i data-lucide="eye"></i> Masuk sebagai Pengunjung</button>
       </div>
     </div>
   </div>
@@ -243,34 +244,34 @@
 <!-- Hidden Access Modal (klik logo 3x) -->
 <div class="modal-bg access-modal-bg" id="accessModal">
   <div class="access-card">
-    <button class="access-close-btn" id="accessCloseBtn" title="Tutup"><i class="fas fa-times"></i></button>
+    <button class="access-close-btn" id="accessCloseBtn" title="Tutup"><i data-lucide="x"></i></button>
     <div class="access-head">
-      <div class="access-head-icon"><i class="fas fa-lock"></i></div>
+      <div class="access-head-icon"><i data-lucide="lock"></i></div>
       <h2>Akses Dashboard</h2>
       <p>Pilih peran untuk masuk ke dashboard</p>
     </div>
     <div class="access-body">
       <div class="access-grid">
         <button class="role-card role-card--admin" id="roleAdminBtn" onclick="doAccessLogin('admin')">
-          <div class="role-card-icon"><i class="fas fa-crown"></i></div>
+          <div class="role-card-icon"><i data-lucide="crown"></i></div>
           <div class="role-card-body">
             <div class="role-card-title">Admin</div>
             <div class="role-card-desc">Akses penuh — kelola produk, user, cabang</div>
           </div>
-          <div class="role-card-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="role-card-arrow"><i data-lucide="chevron-right"></i></div>
           <div class="role-card-shine"></div>
         </button>
         <button class="role-card role-card--editor" id="roleEditorBtn" onclick="doAccessLogin('editor')">
-          <div class="role-card-icon"><i class="fas fa-pen-fancy"></i></div>
+          <div class="role-card-icon"><i data-lucide="pen-tool"></i></div>
           <div class="role-card-body">
             <div class="role-card-title">Editor</div>
             <div class="role-card-desc">Kelola produk & cabang, tanpa hapus</div>
           </div>
-          <div class="role-card-arrow"><i class="fas fa-chevron-right"></i></div>
+          <div class="role-card-arrow"><i data-lucide="chevron-right"></i></div>
           <div class="role-card-shine"></div>
         </button>
       </div>
-      <button class="login-visitor-btn" onclick="doAccessLogin('viewer')"><i class="fas fa-eye"></i> Masuk sebagai Pengunjung</button>
+      <button class="login-visitor-btn" onclick="doAccessLogin('viewer')"><i data-lucide="eye"></i> Masuk sebagai Pengunjung</button>
     </div>
   </div>
 </div>
@@ -288,7 +289,7 @@
     <div class="dash-main" id="dashMain">
       <div class="dash-top">
         <div class="dash-top-left">
-          <button class="mobile-burger" id="mobileBurgerBtn" aria-label="Buka menu"><i class="fas fa-bars"></i></button>
+          <button class="mobile-burger" id="mobileBurgerBtn" aria-label="Buka menu"><i data-lucide="menu"></i></button>
           <h1 id="dashTitle">Dashboard</h1>
         </div>
         <div class="presence-indicator" id="presenceIndicator" style="display:none"></div>
@@ -301,14 +302,14 @@
 </div>
 
 <div class="zoom-overlay" id="zoomOverlay">
-  <button class="zoom-close" id="zoomCloseBtn" aria-label="Tutup zoom"><i class="fas fa-times"></i></button>
+  <button class="zoom-close" id="zoomCloseBtn" aria-label="Tutup zoom"><i data-lucide="x"></i></button>
   <img id="zoomImg" src="" alt="" draggable="false">
   <div class="zoom-hint">Scroll untuk geser &bull; Scroll mouse untuk zoom &bull; Pinch untuk zoom di HP<br>Klik luar gambar untuk tutup</div>
 </div>
 
 <div class="modal-bg" id="confirmModal">
   <div class="confirm-card">
-    <div class="confirm-icon" id="confirmIcon"><i class="fas fa-exclamation-triangle"></i></div>
+    <div class="confirm-icon" id="confirmIcon"><i data-lucide="triangle-alert"></i></div>
     <div class="confirm-title" id="confirmTitle">Konfirmasi</div>
     <div class="confirm-msg" id="confirmMsg">Apakah Anda yakin?</div>
     <div class="confirm-actions">
@@ -317,7 +318,7 @@
     </div>
   </div>
 </div>
-<button class="back-to-top" id="backToTop" title="Kembali ke atas"><i class="fas fa-arrow-up"></i></button>
+<button class="back-to-top" id="backToTop" title="Kembali ke atas"><i data-lucide="arrow-up"></i></button>
 <div class="toast-box" id="toastBox"></div>
 
 <input type="file" id="permFileIn" accept="image/*" multiple class="hidden-file-input">
@@ -326,22 +327,22 @@
 <div class="modal-bg" id="cropModal" style="z-index:1000">
   <div class="crop-modal-card">
     <div class="crop-modal-head">
-      <h3 class="crop-modal-title"><i class="fas fa-crop-alt crop-modal-icon"></i>Potong Gambar</h3>
-      <button class="btn btn-ghost btn-sm" id="cropCloseBtn"><i class="fas fa-times"></i></button>
+      <h3 class="crop-modal-title"><i data-lucide="crop" class="crop-modal-icon"></i>Potong Gambar</h3>
+      <button class="btn btn-ghost btn-sm" id="cropCloseBtn"><i data-lucide="x"></i></button>
     </div>
     <div class="crop-modal-body">
       <img id="cropImg" src="" class="crop-modal-img">
     </div>
     <div class="crop-modal-foot">
       <div class="crop-ratio-group">
-        <button class="btn btn-ghost btn-sm" data-ratio="free" title="Bebas"><i class="fas fa-expand"></i> Bebas</button>
+        <button class="btn btn-ghost btn-sm" data-ratio="free" title="Bebas"><i data-lucide="maximize"></i> Bebas</button>
         <button class="btn btn-ghost btn-sm" data-ratio="1.7777" title="16:9">16:9</button>
         <button class="btn btn-ghost btn-sm" data-ratio="3" title="3:1 Banner">3:1</button>
         <button class="btn btn-ghost btn-sm" data-ratio="2" title="2:1">2:1</button>
       </div>
       <div class="crop-action-group">
         <button class="btn btn-ghost" id="cropCancelBtn">Batal</button>
-        <button class="btn btn-primary" id="cropApplyBtn"><i class="fas fa-crop-alt"></i> Potong & Gunakan</button>
+        <button class="btn btn-primary" id="cropApplyBtn"><i data-lucide="crop"></i> Potong & Gunakan</button>
       </div>
     </div>
   </div>
@@ -369,6 +370,13 @@ function observeReveals() {
 observeReveals();
 new MutationObserver(() => observeReveals()).observe(document.body, { childList: true, subtree: true });
 
+// Lucide auto-render for dynamic content
+let _lucideTimer;
+new MutationObserver(() => {
+  clearTimeout(_lucideTimer);
+  _lucideTimer = setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 30);
+}).observe(document.body, { childList: true, subtree: true });
+
 // Back to top button
 const btt = document.getElementById('backToTop');
 window.addEventListener('scroll', () => {
@@ -378,12 +386,12 @@ window.addEventListener('scroll', () => {
 
 <script src="js/state.js"></script>
 <script src="js/app-data.js"></script>
-<script src="js/app.js?v=20260710k"></script>
+<script src="js/app.js?v=20260711lucide"></script>
 <script src="js/event-handlers.js?v=20260620b"></script>
-<script src="js/hidden-access.js?v=20260620b"></script>
+<script src="js/hidden-access.js?v=20260711lucide"></script>
 <script src="js/presence.js"></script>
-<script src="js/live-chat.js"></script>
+<script src="js/live-chat.js?v=20260711lucide"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="js/g5-ai.js?v=20260710i"></script>
+<script src="js/g5-ai.js?v=20260711lucide"></script>
 </body>
 </html>

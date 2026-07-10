@@ -142,7 +142,7 @@
 
   function buildDemoPickerHTML() {
     var html = '<div class="g5ai-demo-picker" id="g5aiDemoPicker">';
-    html += '<div class="g5ai-demo-search"><i class="fas fa-search"></i><input type="text" id="g5aiDemoSearch" placeholder="Cari pertanyaan..."></div>';
+    html += '<div class="g5ai-demo-search"><i data-lucide="search"></i><input type="text" id="g5aiDemoSearch" placeholder="Cari pertanyaan..."></div>';
     html += '<div class="g5ai-demo-list" id="g5aiDemoList">';
     DEMO_QUESTIONS.forEach(function (group) {
       html += '<div class="g5ai-demo-cat">' + esc(group.cat) + '</div>';
@@ -158,11 +158,57 @@
   var DRAG_THRESHOLD = 6; // px — di bawah ini dianggap klik
   var EDGE_HIDE_RATIO = 0.55; // 55% FAB tersembunyi di balik edge
   var IDLE_BEFORE_HIDE = 3000; // 3 detik idle sebelum nempel ke edge
+  var POS_KEY = 'g5ai_fab_pos'; // localStorage key untuk posisi
   var edgeIdleTimer = null;
+
+  function saveFabPos() {
+    try {
+      var fab = ctx.fabEl;
+      localStorage.setItem(POS_KEY, JSON.stringify({
+        x: ctx.drag.fabX,
+        y: ctx.drag.fabY,
+        side: fab.classList.contains('snapped-left') ? 'left' : 'right'
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadFabPos() {
+    try {
+      var s = JSON.parse(localStorage.getItem(POS_KEY));
+      if (s && typeof s.x === 'number' && typeof s.y === 'number') return s;
+    } catch (e) { /* ignore */ }
+    return null;
+  }
 
   function initDrag() {
     var fab = ctx.fabEl;
     if (!fab) return;
+
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var margin = 12;
+    var fabW = 56;
+    var fabH = 56;
+    ctx.drag.fabW = fabW;
+    ctx.drag.fabH = fabH;
+
+    // Load saved position atau default ke kanan
+    var saved = loadFabPos();
+    if (saved) {
+      ctx.drag.fabX = saved.x;
+      ctx.drag.fabY = Math.max(margin, Math.min(saved.y, vh - fabH - margin));
+      fab.classList.add(saved.side === 'left' ? 'snapped-left' : 'snapped-right');
+    } else {
+      ctx.drag.fabX = vw - fabW - margin;
+      ctx.drag.fabY = vh - fabH - 28;
+      fab.classList.add('snapped-right');
+    }
+
+    // Set posisi dari saved/default (override CSS)
+    fab.style.bottom = 'auto';
+    fab.style.right = 'auto';
+    fab.style.left = ctx.drag.fabX + 'px';
+    fab.style.top = ctx.drag.fabY + 'px';
 
     // Mouse
     fab.addEventListener('mousedown', onDragStart);
@@ -187,12 +233,9 @@
       }
     });
 
-    // Initial snap to default position, lalu hide ke edge
+    // Hide ke edge setelah animasi masuk
     setTimeout(function () {
-      snapToEdge();
-      setTimeout(function () {
-        if (!ctx.isOpen) hideToEdge();
-      }, 500);
+      if (!ctx.isOpen) hideToEdge();
     }, 600);
   }
 
@@ -281,6 +324,7 @@
 
     // Snap ke edge kiri/kanan
     snapToEdge();
+    saveFabPos();
     // Setelah snap, hide ke edge setelah delay
     if (!ctx.isOpen) {
       setTimeout(hideToEdge, 800);
@@ -315,6 +359,8 @@
     // Update snap class buat popup positioning
     fab.classList.toggle('snapped-left', targetX <= vw / 2);
     fab.classList.toggle('snapped-right', targetX > vw / 2);
+
+    saveFabPos();
 
     // Update popup kalau buka
     if (ctx.isOpen) {
@@ -398,19 +444,22 @@
 
     var rect = fab.getBoundingClientRect();
     var vw = window.innerWidth;
+    var vh = window.innerHeight;
     var isMobile = vw <= 480;
+    var MARGIN = 8;
 
     if (isMobile) {
       // Mobile: full width, di atas FAB
       popup.style.left = '0';
       popup.style.right = '0';
-      popup.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      popup.style.bottom = (vh - rect.top + 8) + 'px';
       popup.style.top = 'auto';
       popup.style.width = '100%';
       popup.style.transformOrigin = 'bottom right';
     } else {
       var popupW = Math.min(400, vw - 32);
       var popupMargin = 12;
+      var popupMaxH = Math.min(540, vh - 140);
 
       // Tentukan popup di kiri atau kanan FAB
       var fabCenterX = rect.left + rect.width / 2;
@@ -420,32 +469,40 @@
         // FAB di kiri → popup di kanan FAB
         popupLeft = rect.right + popupMargin;
         popupRight = 'auto';
-        if (popupLeft + popupW > vw - 8) {
-          popupLeft = Math.max(8, rect.left - popupW - popupMargin);
+        if (popupLeft + popupW > vw - MARGIN) {
+          popupLeft = Math.max(MARGIN, rect.left - popupW - popupMargin);
         }
-        if (popupLeft < 8) {
-          popupLeft = 8;
-          popupW = Math.min(popupW, vw - 16);
+        if (popupLeft < MARGIN) {
+          popupLeft = MARGIN;
+          popupW = Math.min(popupW, vw - MARGIN * 2);
         }
       } else {
         // FAB di kanan → popup di kiri FAB
         popupLeft = 'auto';
-        popupRight = (vw - rect.left + popupMargin) + 'px';
-        var neededLeft = vw - parseFloat(popupRight) - popupW;
-        if (neededLeft < 8) {
+        popupRight = vw - rect.left + popupMargin;
+        var neededLeft = vw - popupRight - popupW;
+        if (neededLeft < MARGIN) {
           popupRight = 'auto';
-          popupLeft = Math.max(8, rect.right + popupMargin);
-          if (popupLeft + popupW > vw - 8) {
-            popupLeft = 8;
-            popupW = Math.min(popupW, vw - 16);
+          popupLeft = Math.max(MARGIN, rect.right + popupMargin);
+          if (popupLeft + popupW > vw - MARGIN) {
+            popupLeft = MARGIN;
+            popupW = Math.min(popupW, vw - MARGIN * 2);
           }
         }
       }
 
-      // Vertical: popup muncul di atas FAB
-      var popupBottom = (window.innerHeight - rect.top + 8);
+      // Vertical: popup muncul di atas FAB, di-clamp biar gak keluar layar
+      var popupBottom = vh - rect.top + 8;
+      // Clamp: top edge popup >= MARGIN
+      // top edge = vh - popupBottom - popupMaxH >= MARGIN
+      var maxBottom = vh - popupMaxH - MARGIN;
+      if (popupBottom > maxBottom) {
+        popupBottom = maxBottom;
+      }
+      if (popupBottom < MARGIN) {
+        popupBottom = MARGIN;
+      }
 
-      // Hanya set posisi, JANGAN override height/maxHeight — biar CSS default
       popup.style.left = popupLeft === 'auto' ? 'auto' : popupLeft + 'px';
       popup.style.right = popupRight === 'auto' ? 'auto' : popupRight + 'px';
       popup.style.bottom = popupBottom + 'px';
@@ -470,7 +527,7 @@
     fab.className = 'g5ai-fab';
     fab.id = 'g5aiFab';
     fab.title = 'G5 Assistant';
-    fab.innerHTML = '<i class="fas fa-robot g5ai-fab-icon"></i><span class="g5ai-fab-badge" id="g5aiFabBadge">0</span>';
+    fab.innerHTML = '<i data-lucide="bot" class="g5ai-fab-icon"></i><span class="g5ai-fab-badge" id="g5aiFabBadge">0</span>';
     // Jangan pakai onclick langsung — drag handler akan handle klik
     document.body.appendChild(fab);
     ctx.fabEl = fab;
@@ -482,20 +539,20 @@
     popup.style.display = 'none';
     popup.innerHTML =
       '<div class="g5ai-header">'
-      + '<div class="g5ai-header-avatar"><i class="fas fa-robot"></i></div>'
+      + '<div class="g5ai-header-avatar"><i data-lucide="bot"></i></div>'
       + '<div class="g5ai-header-info">'
       + '<div class="g5ai-header-name">' + esc(AI_NAME) + '</div>'
       + '<div class="g5ai-header-status"><span class="g5ai-status-dot"></span> Online</div>'
       + '</div>'
-      + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i class="fas fa-list-check"></i></button>'
-      + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i class="fas fa-trash-alt"></i></button>'
-      + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i class="fas fa-times"></i></button>'
+      + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i data-lucide="list-checks"></i></button>'
+      + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i data-lucide="trash-2"></i></button>'
+      + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i data-lucide="x"></i></button>'
       + '</div>'
       + buildDemoPickerHTML()
       + '<div class="g5ai-messages" id="g5aiMessages"></div>'
       + '<div class="g5ai-input-area">'
       + '<textarea class="g5ai-input" id="g5aiInput" placeholder="Tanya apa saja tentang toko..." rows="1"></textarea>'
-      + '<button class="g5ai-send" id="g5aiSendBtn" title="Kirim"><i class="fas fa-paper-plane"></i></button>'
+      + '<button class="g5ai-send" id="g5aiSendBtn" title="Kirim"><i data-lucide="send"></i></button>'
       + '</div>';
     document.body.appendChild(popup);
     ctx.popupEl = popup;
@@ -612,7 +669,7 @@
     var el = $('g5aiMessages');
     el.innerHTML =
       '<div class="g5ai-welcome">'
-      + '<div class="g5ai-welcome-icon"><i class="fas fa-robot"></i></div>'
+      + '<div class="g5ai-welcome-icon"><i data-lucide="bot"></i></div>'
       + '<h3>Halo! Saya ' + esc(AI_NAME) + '</h3>'
       + '<p>Asisten AI untuk membantu mengelola toko Anda. Tanyakan apa saja!</p>'
       + '<div class="g5ai-welcome-chips">'

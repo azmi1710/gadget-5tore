@@ -140,7 +140,7 @@
     fab.className = 'lc-fab';
     fab.id = 'lcFab';
     fab.title = 'Live Chat';
-    fab.innerHTML = '<i class="fas fa-comments lc-fab-icon"></i><span class="lc-fab-badge" id="lcFabBadge">0</span>';
+    fab.innerHTML = '<i data-lucide="messages-square" class="lc-fab-icon"></i><span class="lc-fab-badge" id="lcFabBadge">0</span>';
     fab.onclick = toggleCustomerPopup;
     document.body.appendChild(fab);
     ctx.fabEl = fab;
@@ -230,21 +230,21 @@
   function renderCustomerForm() {
     ctx.popupEl.innerHTML =
       '<div class="lc-header">'
-      + '<div class="lc-header-avatar"><i class="fas fa-comments"></i></div>'
+      + '<div class="lc-header-avatar"><i data-lucide="messages-square"></i></div>'
       + '<div class="lc-header-info">'
       + '<div class="lc-header-name">Live Chat</div>'
       + '<div class="lc-header-status"><span class="lc-status-dot"></span> Kami siap membantu</div>'
       + '</div>'
-      + '<button class="lc-header-close" onclick="window.__lcToggle()"><i class="fas fa-times"></i></button>'
+      + '<button class="lc-header-close" onclick="window.__lcToggle()"><i data-lucide="x"></i></button>'
       + '</div>'
       + '<div class="lc-form">'
-      + '<div class="lc-form-icon"><i class="fas fa-headset"></i></div>'
+      + '<div class="lc-form-icon"><i data-lucide="headset"></i></div>'
       + '<h3>Mulai Chat</h3>'
       + '<p>Isi data Anda untuk memulai percakapan dengan tim kami</p>'
       + '<div class="lc-form-fields">'
       + '<input class="lc-form-input" id="lcFormName" placeholder="Nama Anda" maxlength="50">'
       + '<input class="lc-form-input" id="lcFormPhone" placeholder="No. HP (opsional)" type="tel" maxlength="20">'
-      + '<button class="lc-form-submit" id="lcFormSubmit"><i class="fas fa-paper-plane" style="margin-right:6px"></i> Mulai Chat</button>'
+      + '<button class="lc-form-submit" id="lcFormSubmit"><i data-lucide="send" style="margin-right:6px"></i> Mulai Chat</button>'
       + '</div>'
       + '</div>';
 
@@ -307,17 +307,17 @@
   function renderCustomerChat() {
     ctx.popupEl.innerHTML =
       '<div class="lc-header">'
-      + '<div class="lc-header-avatar"><i class="fas fa-comments"></i></div>'
+      + '<div class="lc-header-avatar"><i data-lucide="messages-square"></i></div>'
       + '<div class="lc-header-info">'
       + '<div class="lc-header-name">Live Chat</div>'
       + '<div class="lc-header-status"><span class="lc-status-dot" id="lcStatusDot"></span> <span id="lcHeaderStatusText">Terhubung</span> <span class="lc-mode-badge lc-mode-badge--ai" id="lcModeBadge">\uD83E\uDD16 AI</span></div>'
       + '</div>'
-      + '<button class="lc-header-close" onclick="window.__lcToggle()"><i class="fas fa-times"></i></button>'
+      + '<button class="lc-header-close" onclick="window.__lcToggle()"><i data-lucide="x"></i></button>'
       + '</div>'
       + '<div class="lc-messages" id="lcMessages"></div>'
       + '<div class="lc-input-area">'
       + '<textarea class="lc-input" id="lcInput" placeholder="Ketik pesan..." rows="1"></textarea>'
-      + '<button class="lc-send" id="lcSendBtn" title="Kirim"><i class="fas fa-paper-plane"></i></button>'
+      + '<button class="lc-send" id="lcSendBtn" title="Kirim"><i data-lucide="send"></i></button>'
       + '</div>';
 
     $('lcSendBtn').onclick = sendCustomerMessage;
@@ -771,7 +771,7 @@
           // Replace input area with "Mulai Chat Baru" button
           var inputArea = ctx.popupEl.querySelector('.lc-input-area');
           if (inputArea && !inputArea.querySelector('#lcNewSessionBtn')) {
-            inputArea.innerHTML = '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:0"><i class="fas fa-plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
+            inputArea.innerHTML = '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:0"><i data-lucide="plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
             $('lcNewSessionBtn').onclick = function () {
               clearCustomerSession();
               ctx.sessionId = null;
@@ -861,7 +861,7 @@
     var chatItem = document.createElement('div');
     chatItem.className = 'nav-item' + (state && state.admin && state.admin.panel === 'chat' ? ' active' : '');
     chatItem.dataset.lcPanel = 'chat';
-    chatItem.innerHTML = '<i class="fas fa-headset"></i> Chat <span class="nav-badge" id="lcSidebarBadge" style="display:none">0</span>';
+    chatItem.innerHTML = '<i data-lucide="headset"></i> Chat <span class="nav-badge" id="lcSidebarBadge" style="display:none">0</span>';
     chatItem.onclick = function () {
       if (state) state.admin.panel = 'chat';
       if (typeof renderSide === 'function') renderSide();
@@ -951,8 +951,8 @@
   function showEscalationToast(customerName, sessionId) {
     var el = document.createElement('div');
     el.className = 'lc-escalation-toast';
-    el.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>' + esc(customerName || 'Customer') + '</strong> butuh bantuan admin <button class="lc-escalation-toast-btn">Ambil Alih</button>';
-    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
+    el.innerHTML = '<i data-lucide="triangle-alert"></i> <strong>' + esc(customerName || 'Customer') + '</strong> butuh bantuan admin <button class="lc-escalation-toast-btn">Ambil Alih</button>';
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:Inter,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
     el.querySelector('.lc-escalation-toast-btn').style.cssText = 'background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;';
     el.querySelector('.lc-escalation-toast-btn').onclick = function (e) {
       e.stopPropagation();
@@ -977,7 +977,7 @@
   // ── Admin Inbox ────────────────────────────────
   function renderAdminInbox(el) {
     if (!state || !state.session || !state.session.currentUser) {
-      el.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Akses ditolak</p></div>';
+      el.innerHTML = '<div class="empty-state"><i data-lucide="lock"></i><p>Akses ditolak</p></div>';
       return;
     }
 
@@ -985,7 +985,7 @@
       '<div class="lc-inbox" id="lcInbox">'
       + '<div class="lc-inbox-sessions">'
       + '<div class="lc-inbox-sessions-head">'
-      + '<h3><i class="fas fa-comments"></i> Sesi Chat</h3>'
+      + '<h3><i data-lucide="messages-square"></i> Sesi Chat</h3>'
       + '<span class="lc-inbox-sessions-count" id="lcSessionCount">0</span>'
       + '</div>'
       + '<div class="lc-inbox-tabs" id="lcInboxTabs">'
@@ -996,7 +996,7 @@
       + 'Riwayat <span class="lc-inbox-tab-badge lc-inbox-tab-badge--history" id="lcTabBadgeHistory">0</span>'
       + '</button>'
       + '<span id="lcClearHistoryWrap" style="display:none;margin-left:auto;padding:3px 0">'
-      + '<button class="lc-clear-history-link" onclick="window.__lcClearHistory()"><i class="fas fa-trash-alt" style="margin-right:3px;font-size:10px"></i>Hapus Semua</button>'
+      + '<button class="lc-clear-history-link" onclick="window.__lcClearHistory()"><i data-lucide="trash-2" style="margin-right:3px;font-size:10px"></i>Hapus Semua</button>'
       + '</span>'
       + '</div>'
       + '<div class="lc-inbox-summary" id="lcInboxSummary"></div>'
@@ -1004,7 +1004,7 @@
       + '</div>'
       + '<div class="lc-inbox-chat" id="lcInboxChat">'
       + '<div class="lc-inbox-empty" id="lcInboxEmpty">'
-      + '<i class="fas fa-comments"></i>'
+      + '<i data-lucide="messages-square"></i>'
       + '<h3>Inbox Chat</h3>'
       + '<p>Pilih sesi chat untuk melihat percakapan</p>'
       + '</div>'
@@ -1069,7 +1069,7 @@
               : 'Belum ada sesi chat');
       listEl.innerHTML =
         '<div class="lc-sessions-empty">'
-        + '<i class="fas fa-inbox"></i>'
+        + '<i data-lucide="inbox"></i>'
         + '<span>' + emptyMsg + '</span>'
         + '</div>';
       return;
@@ -1186,7 +1186,7 @@
     if (chatEl) {
       chatEl.innerHTML =
         '<div class="lc-inbox-empty">'
-        + '<i class="fas fa-comments"></i>'
+        + '<i data-lucide="messages-square"></i>'
         + '<h3>Inbox Chat</h3>'
         + '<p>Pilih sesi chat untuk melihat percakapan</p>'
         + '</div>';
@@ -1227,7 +1227,7 @@
     if (chatEl) {
       chatEl.innerHTML =
         '<div class="lc-inbox-empty">'
-        + '<i class="fas fa-comments"></i>'
+        + '<i data-lucide="messages-square"></i>'
         + '<h3>' + (tab === 'history' ? 'Riwayat Chat' : 'Inbox Chat') + '</h3>'
         + '<p>Pilih sesi untuk melihat percakapan</p>'
         + '</div>';
@@ -1317,23 +1317,23 @@
       + '</div>'
       + '<div class="lc-inbox-chat-actions">'
       + (isClosed
-        ? '<span style="font-size:11px;color:var(--muted,#6E6A5E);font-weight:600"><i class="fas fa-lock" style="margin-right:4px"></i>Ditutup</span>'
+        ? '<span style="font-size:11px;color:var(--muted,#6E6A5E);font-weight:600"><i data-lucide="lock" style="margin-right:4px"></i>Ditutup</span>'
         : (session.mode === 'admin'
-          ? '<button class="lc-takeover-btn taken" disabled><i class="fas fa-check" style="margin-right:4px"></i>' + esc(session.handled_by || 'Ditangani') + '</button>'
-          : '<button class="lc-takeover-btn" onclick="window.__lcTakeover(\'' + sessionId + '\')"><i class="fas fa-hand-paper" style="margin-right:4px"></i>Takeover</button>'))
-      + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + s.session_id + '\')" title="Hapus sesi"><i class="fas fa-trash"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i class="fas fa-times" style="margin-right:3px"></i>Tutup</button>')
+          ? '<button class="lc-takeover-btn taken" disabled><i data-lucide="check" style="margin-right:4px"></i>' + esc(session.handled_by || 'Ditangani') + '</button>'
+          : '<button class="lc-takeover-btn" onclick="window.__lcTakeover(\'' + sessionId + '\')"><i data-lucide="hand" style="margin-right:4px"></i>Takeover</button>'))
+      + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + s.session_id + '\')" title="Hapus sesi"><i data-lucide="trash-2"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i data-lucide="x" style="margin-right:3px"></i>Tutup</button>')
       + '</div>'
       + '</div>'
       + '<div class="lc-inbox-messages" id="lcAdminMessages"></div>'
       + '<div class="lc-inbox-input-area">'
       + (isClosed
         ? '<textarea class="lc-inbox-input" disabled placeholder="Sesi telah ditutup" rows="1" style="opacity:0.5"></textarea>'
-          + '<button class="lc-inbox-send" disabled style="opacity:0.4"><i class="fas fa-paper-plane"></i></button>'
+          + '<button class="lc-inbox-send" disabled style="opacity:0.4"><i data-lucide="send"></i></button>'
         : (isAdmin
           ? '<textarea class="lc-inbox-input" id="lcAdminInput" placeholder="Balas pesan..." rows="1"></textarea>'
-            + '<button class="lc-inbox-send" id="lcAdminSendBtn"><i class="fas fa-paper-plane"></i></button>'
+            + '<button class="lc-inbox-send" id="lcAdminSendBtn"><i data-lucide="send"></i></button>'
           : '<textarea class="lc-inbox-input" id="lcAdminInput" disabled placeholder="' + (session.mode === 'admin' ? 'Ditangani oleh ' + esc(session.handled_by || 'admin lain') : 'Klik Takeover untuk mengambil alih dan membalas') + '" rows="1" style="opacity:0.6"></textarea>'
-            + '<button class="lc-inbox-send" id="lcAdminSendBtn" disabled style="opacity:0.6"><i class="fas fa-paper-plane"></i></button>'))
+            + '<button class="lc-inbox-send" id="lcAdminSendBtn" disabled style="opacity:0.6"><i data-lucide="send"></i></button>'))
       + '</div>';
 
     // Load messages
@@ -1534,7 +1534,7 @@
         if (chatEl) {
           chatEl.innerHTML =
             '<div class="lc-inbox-empty">'
-            + '<i class="fas fa-comments"></i>'
+            + '<i data-lucide="messages-square"></i>'
             + '<h3>Inbox Chat</h3>'
             + '<p>Pilih sesi chat untuk melihat percakapan</p>'
             + '</div>';
@@ -1642,7 +1642,7 @@
         ctx.activeSessionId = null;
         var chatEl = $('lcInboxChat');
         if (chatEl) {
-          chatEl.innerHTML = '<div class="lc-inbox-empty"><i class="fas fa-comments"></i><h3>Riwayat Chat</h3><p>Pilih sesi untuk melihat percakapan</p></div>';
+          chatEl.innerHTML = '<div class="lc-inbox-empty"><i data-lucide="messages-square"></i><h3>Riwayat Chat</h3><p>Pilih sesi untuk melihat percakapan</p></div>';
         }
       }
     } catch (e) {
@@ -1667,7 +1667,7 @@
       renderSessionList();
       var chatEl = $('lcInboxChat');
       if (chatEl) {
-        chatEl.innerHTML = '<div class="lc-inbox-empty"><i class="fas fa-check-circle" style="color:#15803D"></i><h3>Riwayat Dihapus</h3><p>Semua riwayat chat telah dihapus.</p></div>';
+        chatEl.innerHTML = '<div class="lc-inbox-empty"><i data-lucide="circle-check" style="color:#15803D"></i><h3>Riwayat Dihapus</h3><p>Semua riwayat chat telah dihapus.</p></div>';
       }
       var cw = $('lcClearHistoryWrap');
       if (cw) cw.style.display = 'none';

@@ -194,7 +194,7 @@
   font-size: 15px;
   font-weight: 800;
   color: #F1F0ED;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Outfit', sans-serif;
   letter-spacing: -0.2px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -346,7 +346,7 @@
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   min-width: 0;
   transition: background 0.2s ease;
@@ -395,7 +395,7 @@
   background: transparent;
   padding: 8px 14px 8px 24px;
   font-size: 11.5px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg2, #38322A);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -652,7 +652,7 @@ body.dark .g5ai-msg table th {
   border-radius: 20px;
   padding: 9px 14px;
   font-size: 13px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--fg, #1B1611);
   background: rgba(0, 0, 0, 0.025);
   resize: none;
@@ -746,7 +746,7 @@ body.dark .g5ai-msg table th {
   font-size: 17px;
   font-weight: 800;
   color: var(--fg, #1B1611);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Outfit', sans-serif;
   background: linear-gradient(135deg, var(--fg, #1B1611) 0%, var(--accent, #C8A44E) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -781,7 +781,7 @@ body.dark .g5ai-msg table th {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 

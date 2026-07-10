@@ -11,7 +11,7 @@ body.dark .detail-price{color:#E2E8F0}
 body.dark .detail-cat{color:#93C5FD;background:rgba(30,58,95,.15);border-color:rgba(30,58,95,.2)}
 body.dark .detail-brand{color:#93C5FD}
 body.dark .spec-table tr:hover{background:rgba(30,58,95,.1)}
-body.dark h1,body.dark h2,body.dark h3,body.dark .hero-title,body.dark .detail-name,body.dark .detail-price,body.dark .stat-value,body.dark .card-head h3,body.dark .ft-stat-val,body.dark .pub-logo .fv,body.dark .side-logo .sfv{font-family:'Sora',sans-serif}
+body.dark h1,body.dark h2,body.dark h3,body.dark .hero-title,body.dark .detail-name,body.dark .detail-price,body.dark .stat-value,body.dark .card-head h3,body.dark .ft-stat-val,body.dark .pub-logo .fv,body.dark .side-logo .sfv{font-family:'Outfit',sans-serif}
 body.dark .toast{background:var(--glass)}
 body.dark .modal-bg{background:rgba(0,0,0,.75)}
 body.dark .login-card,body.dark .confirm-card{background:var(--bg2)}

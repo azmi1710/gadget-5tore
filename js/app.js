@@ -244,7 +244,7 @@ function renderBranchInfo() {
   const el = document.getElementById('ftInfoSection');
   if (!el) return;
   const active = state.db.branches.filter((b) => b.active);
-  if (!active.length || !state.session.selectedBranch) { el.innerHTML = `<h3><i class="fas fa-store"></i> Gadget 5tore</h3><div style="color:var(--muted);font-size:13px;padding:8px 0">Belum ada cabang tersedia.</div>`; return; }
+  if (!active.length || !state.session.selectedBranch) { el.innerHTML = `<h3><i data-lucide="store"></i> Gadget 5tore</h3><div style="color:var(--muted);font-size:13px;padding:8px 0">Belum ada cabang tersedia.</div>`; return; }
   const b = state.session.selectedBranch;
   const branchName = b.name || 'Gadget 5tore';
   const shortName = branchName.replace('Gadget 5tore', '').trim() || 'Cabang Utama';
@@ -253,7 +253,7 @@ function renderBranchInfo() {
       ? `<div class="branch-selector">${active.map((ab) => `<button class="branch-chip${ab.id === b.id ? ' active' : ''}" onclick="selectBranch(${ab.id})">${esc(ab.name.replace('Gadget 5tore', '').trim() || ab.name)}</button>`).join('')}</div>`
       : '';
   const hoursHtml = (b.hours || []).length
-    ? `<div class="ft-hours"><div class="ft-hours-title"><i class="fas fa-clock"></i> Jam Operasional</div>${b.hours.map((h, i) => `<div class="ft-hours-row${i === b.hours.length - 1 ? ' ft-hours-closed' : ''}"><span>${esc(h.day)}</span><span>${esc(h.time)}</span></div>`).join('')}</div>`
+    ? `<div class="ft-hours"><div class="ft-hours-title"><i data-lucide="clock"></i> Jam Operasional</div>${b.hours.map((h, i) => `<div class="ft-hours-row${i === b.hours.length - 1 ? ' ft-hours-closed' : ''}"><span>${esc(h.day)}</span><span>${esc(h.time)}</span></div>`).join('')}</div>`
     : '';
   let socialHtml = '<div class="ft-social-row">';
   const waNums = Array.isArray(b.wa_numbers)
@@ -265,12 +265,12 @@ function renderBranchInfo() {
   const soc = b.socials || {};
   Object.entries(soc).forEach(([platform, url]) => { if (typeof url === 'string' && url.trim()) socialHtml += `<a href="${esc(url)}" target="_blank" class="ft-social-btn" aria-label="${esc(getSocialLabel(platform))}">${getSocialIcon(platform)}</a>`; });
   if (b.map_url)
-    socialHtml += `<a href="${esc(b.map_url)}" target="_blank" class="ft-social-btn" aria-label="Google Maps"><i class="fas fa-map-marker-alt"></i></a>`;
+    socialHtml += `<a href="${esc(b.map_url)}" target="_blank" class="ft-social-btn" aria-label="Google Maps"><i data-lucide="map-pin"></i></a>`;
   socialHtml += '</div>';
   const mapHtml = b.map_url
-    ? `<button class="map-toggle" id="mapToggle" onclick="toggleMap()"><i class="fas fa-map"></i> Lihat Lokasi di Google Maps</button><div class="map-wrap" id="mapWrap"><iframe src="${esc(b.map_url)}" allowfullscreen loading="lazy"></iframe></div>`
+    ? `<button class="map-toggle" id="mapToggle" onclick="toggleMap()"><i data-lucide="map"></i> Lihat Lokasi di Google Maps</button><div class="map-wrap" id="mapWrap"><iframe src="${esc(b.map_url)}" allowfullscreen loading="lazy"></iframe></div>`
     : '';
-  el.innerHTML = `${chipHtml}<h3><i class="fas fa-store"></i> Gadget 5tore${shortName !== 'Cabang Utama' ? ' — ' + esc(shortName) : ''}</h3><div class="store-info-list">${b.address ? `<div class="store-info-item"><div class="si-icon"><i class="fas fa-map-marker-alt"></i></div><div><div class="si-label">Alamat</div><div class="si-value">${esc(b.address)}</div></div></div>` : ''}${b.phone ? `<div class="store-info-item"><div class="si-icon"><i class="fas fa-phone"></i></div><div><div class="si-label">Telepon</div><div class="si-value"><a href="tel:${esc(b.phone.replace(/\D/g, ''))}">${esc(fmtPhone(b.phone))}</a></div></div></div>` : ''}${b.email ? `<div class="store-info-item"><div class="si-icon"><i class="fas fa-envelope"></i></div><div><div class="si-label">Email</div><div class="si-value"><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></div></div></div>` : ''}</div>${hoursHtml}${socialHtml}${mapHtml}`;
+  el.innerHTML = `${chipHtml}<h3><i data-lucide="store"></i> Gadget 5tore${shortName !== 'Cabang Utama' ? ' — ' + esc(shortName) : ''}</h3><div class="store-info-list">${b.address ? `<div class="store-info-item"><div class="si-icon"><i data-lucide="map-pin"></i></div><div><div class="si-label">Alamat</div><div class="si-value">${esc(b.address)}</div></div></div>` : ''}${b.phone ? `<div class="store-info-item"><div class="si-icon"><i data-lucide="phone"></i></div><div><div class="si-label">Telepon</div><div class="si-value"><a href="tel:${esc(b.phone.replace(/\D/g, ''))}">${esc(fmtPhone(b.phone))}</a></div></div></div>` : ''}${b.email ? `<div class="store-info-item"><div class="si-icon"><i data-lucide="mail"></i></div><div><div class="si-label">Email</div><div class="si-value"><a href="mailto:${esc(b.email)}">${esc(b.email)}</a></div></div></div>` : ''}</div>${hoursHtml}${socialHtml}${mapHtml}`;
 }
 async function sbInsert(p) {
   if (!state.session.sb) return null;
@@ -565,7 +565,7 @@ function renderRevPhotos() {
   el.innerHTML = state.ui.revPhotos
     .map(
       (p, i) =>
-        `<div style="position:relative;display:inline-block"><img src="${esc(p)}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;border:1px solid var(--border)"><button class="rp-remove" onclick="state.ui.revPhotos.splice(${i},1);renderRevPhotos()"><i class="fas fa-times"></i></button></div>`
+        `<div style="position:relative;display:inline-block"><img src="${esc(p)}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;border:1px solid var(--border)"><button class="rp-remove" onclick="state.ui.revPhotos.splice(${i},1);renderRevPhotos()"><i data-lucide="x"></i></button></div>`
     )
     .join('');
 }
@@ -593,11 +593,11 @@ function toggleReviewForm() {
     btn = document.getElementById('formToggleBtn');
   wrap.classList.toggle('show');
   if (wrap.classList.contains('show')) {
-    btn.innerHTML = '<i class="fas fa-times"></i> Tutup Form';
+    btn.innerHTML = '<i data-lucide="x"></i> Tutup Form';
     btn.style.borderColor = 'var(--accent)';
     btn.style.borderStyle = 'solid';
   } else {
-    btn.innerHTML = '<i class="fas fa-pen"></i> Tulis Ulasan';
+    btn.innerHTML = '<i data-lucide="pencil"></i> Tulis Ulasan';
     btn.style.borderColor = '';
     btn.style.borderStyle = '';
   }
@@ -680,7 +680,7 @@ function renderReviews() {
   if (elFrom) elFrom.textContent = 'dari ' + publicReviews.length + ' ulasan';
   if (elStars) {
     let sh = '';
-    for (let i = 1; i <= 5; i++) { sh += `<i class="fas fa-star${i <= Math.round(parseFloat(avg)) ? '' : ' empty'}"></i>`; }
+    for (let i = 1; i <= 5; i++) { sh += `<i data-lucide="star"${i <= Math.round(parseFloat(avg)) ? '' : ' class="empty"'}></i>`; }
     elStars.innerHTML = sh;
   }
   if (elBars) {
@@ -690,14 +690,14 @@ function renderReviews() {
       .map((s) => {
         const c = counts[s - 1];
         const pct = publicReviews.length ? Math.round((c / publicReviews.length) * 100) : 0;
-        return `<div class="ft-bar-row"><span class="ft-bar-label">${s} <i class="fas fa-star" style="font-size:7px;color:var(--gold)"></i></span><div class="ft-bar-track"><div class="ft-bar-fill" style="width:${pct}%"></div></div><span class="ft-bar-count">${c}</span></div>`;
+        return `<div class="ft-bar-row"><span class="ft-bar-label">${s} <i data-lucide="star" style="font-size:7px;color:var(--gold)"></i></span><div class="ft-bar-track"><div class="ft-bar-fill" style="width:${pct}%"></div></div><span class="ft-bar-count">${c}</span></div>`;
       })
       .join('');
   }
   if (elStatProd) elStatProd.textContent = state.db.products.filter((p) => !p.archived).length;
   if (!publicReviews.length) {
     list.innerHTML =
-      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i class="fas fa-comment-slash" style="font-size:20px;display:block;margin-bottom:8px;opacity:.3"></i>Belum ada ulasan</div>';
+      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i data-lucide="message-square-off" style="font-size:20px;display:block;margin-bottom:8px;opacity:.3"></i>Belum ada ulasan</div>';
     toggle.style.display = 'none';
     wrap.classList.remove('expanded');
     return;
@@ -709,7 +709,7 @@ function renderReviews() {
         .fill(0)
         .map(
           (_, i) =>
-            `<i class="fas fa-star" style="color:${i < r.rating ? 'var(--gold)' : 'var(--border)'}"></i>`
+            `<i data-lucide="star" class="${i < r.rating ? '' : 'empty'}" style="color:${i < r.rating ? 'var(--gold)' : 'var(--border)'}"></i>`
         )
         .join('');
       const photos =
@@ -777,7 +777,7 @@ function renderReviewList(el) {
   baseList.forEach(r => { if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating - 1]++; });
 
   if (!total) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-comment-slash"></i></div><h3>Belum ada ulasan</h3><p>Belum ada ulasan masuk</p></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square-off"></i></div><h3>Belum ada ulasan</h3><p>Belum ada ulasan masuk</p></div>';
     return;
   }
 
@@ -789,32 +789,32 @@ function renderReviewList(el) {
     + '<span class="review-filter-label">Status</span>'
     + '<div class="review-filter-chips">'
     + '<button class="review-filter-chip' + (fs==='all'?' active':'') + '" onclick="setReviewFilterStatus(\'all\')">Semua <span class="chip-count">(' + total + ')</span></button>'
-    + '<button class="review-filter-chip' + (fs==='pending'?' active':'') + '" onclick="setReviewFilterStatus(\'pending\')"><i class="fas fa-clock" style="font-size:10px;margin-right:2px"></i>Menunggu <span class="chip-count">(' + pendingCount + ')</span></button>'
-    + '<button class="review-filter-chip' + (fs==='shown'?' active':'') + '" onclick="setReviewFilterStatus(\'shown\')"><i class="fas fa-check" style="font-size:10px;margin-right:2px"></i>Ditampilkan <span class="chip-count">(' + shownCount + ')</span></button>'
+    + '<button class="review-filter-chip' + (fs==='pending'?' active':'') + '" onclick="setReviewFilterStatus(\'pending\')"><i data-lucide="clock" style="font-size:10px;margin-right:2px"></i>Menunggu <span class="chip-count">(' + pendingCount + ')</span></button>'
+    + '<button class="review-filter-chip' + (fs==='shown'?' active':'') + '" onclick="setReviewFilterStatus(\'shown\')"><i data-lucide="check" style="font-size:10px;margin-right:2px"></i>Ditampilkan <span class="chip-count">(' + shownCount + ')</span></button>'
     + '</div></div>'
     + '<div class="review-filter-bar" style="margin-top:8px">'
     + '<span class="review-filter-label">Rating</span>'
     + '<div class="review-filter-chips">'
     + '<button class="review-filter-chip review-star-chip' + (fr===0?' active':'') + '" onclick="setReviewFilterRating(0)">Semua</button>'
-    + [5,4,3,2,1].map(s => '<button class="review-filter-chip review-star-chip' + (fr===s?' active':'') + '" onclick="setReviewFilterRating(' + s + ')"><i class="fas fa-star"></i> ' + s + ' <span class="chip-count">(' + ratingCounts[s-1] + ')</span></button>').join('')
+    + [5,4,3,2,1].map(s => '<button class="review-filter-chip review-star-chip' + (fr===s?' active':'') + '" onclick="setReviewFilterRating(' + s + ')"><i data-lucide="star"></i> ' + s + ' <span class="chip-count">(' + ratingCounts[s-1] + ')</span></button>').join('')
     + '</div></div></div>';
 
   const bulkHtml = '<div class="review-bulk-bar hidden" id="reviewBulkBar" style="margin:12px 20px 0">'
     + '<span class="review-bulk-info"><strong id="reviewBulkCount">0</strong> ulasan dipilih</span>'
     + '<div class="review-bulk-actions" id="reviewBulkActions">'
-    + '<button class="btn btn-primary btn-sm" id="bulkToggleBtn" onclick="bulkToggleReviews()"><i class="fas fa-eye"></i> Tampilkan</button>'
-    + '<button class="btn btn-danger btn-sm" onclick="bulkDeleteReviews()"><i class="fas fa-trash"></i> Hapus</button>'
+    + '<button class="btn btn-primary btn-sm" id="bulkToggleBtn" onclick="bulkToggleReviews()"><i data-lucide="eye"></i> Tampilkan</button>'
+    + '<button class="btn btn-danger btn-sm" onclick="bulkDeleteReviews()"><i data-lucide="trash-2"></i> Hapus</button>'
     + '</div></div>';
 
   const tableRows = pageItems.map(r => {
     const stars = Array(5).fill(0).map((_, i) =>
-      '<i class="fas fa-star" style="color:' + (i < r.rating ? 'var(--gold)' : 'var(--border)') + ';font-size:10px"></i>'
+      '<i data-lucide="star" class="' + (i < r.rating ? '' : 'empty') + '" style="color:' + (i < r.rating ? 'var(--gold)' : 'var(--border)') + ';font-size:10px"></i>'
     ).join('');
     const date = r.created_at
       ? new Date(r.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
       : '-';
     const statusBadge = r.hidden
-      ? '<span class="badge badge-yellow"><i class="fas fa-clock" style="font-size:8px;margin-right:3px"></i>Menunggu</span>'
+      ? '<span class="badge badge-yellow"><i data-lucide="clock" style="font-size:8px;margin-right:3px"></i>Menunggu</span>'
       : '<span class="badge badge-green">Ditampilkan</span>';
     const shortComment = (r.comment || '').length > 50
       ? (r.comment || '').substring(0, 50) + '...'
@@ -823,7 +823,7 @@ function renderReviewList(el) {
     return '<tr id="rrow-' + r.id + '" class="' + (isSelected ? 'review-selected' : '') + '" style="' + (r.hidden ? 'opacity:.6' : '') + '">'
       + '<td><input type="checkbox" class="review-cb" id="rcb-' + r.id + '" ' + (isSelected ? 'checked' : '') + ' onchange="toggleReviewSelect(' + r.id + ')"></td>'
       + '<td><div style="display:flex;align-items:center;gap:8px"><img src="https://ui-avatars.com/api/?name=' + encodeURIComponent(r.name || 'U') + '&background=D9503F&color=fff&size=64&bold=true" style="width:30px;height:30px;border-radius:50%;object-fit:cover"><div><div style="font-weight:600;font-size:12px;color:var(--navy)">' + esc(r.name || 'Anonim') + '</div>'
-      + (r.photos && r.photos.length ? '<div style="font-size:9px;color:var(--accent);cursor:pointer" onclick="viewReviewPhotos(' + r.id + ')" title="Lihat ' + r.photos.length + ' foto"><i class="fas fa-image"></i> ' + r.photos.length + ' foto</div>' : '')
+      + (r.photos && r.photos.length ? '<div style="font-size:9px;color:var(--accent);cursor:pointer" onclick="viewReviewPhotos(' + r.id + ')" title="Lihat ' + r.photos.length + ' foto"><i data-lucide="image"></i> ' + r.photos.length + ' foto</div>' : '')
       + '</div></div></td>'
       + '<td>' + stars + '</td>'
       + '<td style="white-space:normal;max-width:250px;color:var(--muted);font-size:11px" title="' + esc(r.comment || '') + '">' + esc(shortComment) + '</td>'
@@ -831,12 +831,12 @@ function renderReviewList(el) {
       + '<td>' + statusBadge + '</td>'
       + '<td><div class="action-btns">'
       + '<button class="btn btn-ghost btn-sm" onclick="toggleReviewStatus(' + r.id + ')" title="' + (r.hidden ? 'Tampilkan' : 'Sembunyikan') + '"><i class="fas fa-' + (r.hidden ? 'eye' : 'eye-slash') + '"></i></button>'
-      + '<button class="btn btn-danger btn-sm" onclick="deleteReview(' + r.id + ')" title="Hapus"><i class="fas fa-trash"></i></button>'
+      + '<button class="btn btn-danger btn-sm" onclick="deleteReview(' + r.id + ')" title="Hapus"><i data-lucide="trash-2"></i></button>'
       + '</div></td></tr>';
   }).join('');
 
   el.innerHTML = '<div class="card">'
-    + '<div class="card-head"><h3><i class="fas fa-comments"></i> Daftar Ulasan (' + total + ')</h3>'
+    + '<div class="card-head"><h3><i data-lucide="messages-square"></i> Daftar Ulasan (' + total + ')</h3>'
     + '<div style="font-size:12px;color:var(--muted)">Ditampilkan: ' + shownCount + ' | Menunggu: ' + pendingCount + '</div></div>'
     + filterHtml
     + bulkHtml
@@ -924,13 +924,13 @@ function updateReviewBulkBar() {
     const allHidden = selectedReviews.every(r => r.hidden);
     const allShown = selectedReviews.every(r => !r.hidden);
     if (allHidden) {
-      toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Tampilkan';
+      toggleBtn.innerHTML = '<i data-lucide="eye"></i> Tampilkan';
       toggleBtn.className = 'btn btn-primary btn-sm';
     } else if (allShown) {
-      toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Sembunyikan';
+      toggleBtn.innerHTML = '<i data-lucide="eye-off"></i> Sembunyikan';
       toggleBtn.className = 'btn btn-warning btn-sm';
     } else {
-      toggleBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Toggle Status';
+      toggleBtn.innerHTML = '<i data-lucide="repeat"></i> Toggle Status';
       toggleBtn.className = 'btn btn-warning btn-sm';
     }
   }
@@ -1004,7 +1004,7 @@ function showConfirm(msg, title = 'Konfirmasi', type = 'danger') {
     card.className = 'confirm-card';
     if (type === 'delete') {
       card.classList.add('type-danger');
-      icon.innerHTML = '<i class="fas fa-trash-alt"></i>';
+      icon.innerHTML = '<i data-lucide="trash-2"></i>';
       icon.className = 'confirm-icon confirm-icon-lg';
       icon.style.background = 'rgba(220,38,38,.08)';
       icon.style.color = 'var(--danger)';
@@ -1012,7 +1012,7 @@ function showConfirm(msg, title = 'Konfirmasi', type = 'danger') {
       document.getElementById('confirmOk').textContent = 'Ya, Hapus';
     } else if (type === 'warning') {
       card.classList.add('type-warning');
-      icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+      icon.innerHTML = '<i data-lucide="triangle-alert"></i>';
       icon.className = 'confirm-icon confirm-icon-lg';
       icon.style.background = 'rgba(232,147,12,.08)';
       icon.style.color = 'var(--warning)';
@@ -1020,7 +1020,7 @@ function showConfirm(msg, title = 'Konfirmasi', type = 'danger') {
       document.getElementById('confirmOk').textContent = 'Ya, Lanjutkan';
     } else {
       card.classList.add('type-info');
-      icon.innerHTML = '<i class="fas fa-question-circle"></i>';
+      icon.innerHTML = '<i data-lucide="circle-help"></i>';
       icon.className = 'confirm-icon confirm-icon-lg';
       icon.style.background = 'var(--accent-soft)';
       icon.style.color = 'var(--accent)';
@@ -1149,24 +1149,24 @@ function updateNavAuth() {
         .slice(0, 2) || 'U';
     right.innerHTML = `
       <div class="mob-dropdown">
-        <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
+        <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i data-lucide="ellipsis-vertical"></i></button>
         <div class="mob-dropdown-menu">
           <div class="mob-dropdown-header">
             <div class="avatar" style="width:28px;height:28px;font-size:10px">${ini}</div>
             <div><div style="font-size:12px;font-weight:700;color:var(--fg)">${esc(state.session.currentUser.display_name)}</div><div style="font-size:10px;color:var(--muted)">${esc(ROLES[state.session.currentUser.role]?.label || '')}</div></div>
           </div>
           <button class="mob-dropdown-item" onclick="toggleTheme();closeMobDropdown()"><i class="fas ${ti}"></i> Ganti Mode</button>
-          <button class="mob-dropdown-item" onclick="showView('dashboard');state.admin.panel='dashboard';renderSide();renderDash();closeMobDropdown()"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
-          <button class="mob-dropdown-item danger" onclick="doLogout();closeMobDropdown()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+          <button class="mob-dropdown-item" onclick="showView('dashboard');state.admin.panel='dashboard';renderSide();renderDash();closeMobDropdown()"><i data-lucide="gauge"></i> Dashboard</button>
+          <button class="mob-dropdown-item danger" onclick="doLogout();closeMobDropdown()"><i data-lucide="log-out"></i> Logout</button>
         </div>
       </div>`;
   } else {
     right.innerHTML = `
       <div class="mob-dropdown">
-        <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
+        <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i data-lucide="ellipsis-vertical"></i></button>
         <div class="mob-dropdown-menu">
           <button class="mob-dropdown-item" onclick="toggleTheme();closeMobDropdown()"><i class="fas ${ti}"></i> Ganti Mode</button>
-          <button class="mob-dropdown-item" onclick="openLogin();closeMobDropdown()"><i class="fas fa-lock"></i> Login</button>
+          <button class="mob-dropdown-item" onclick="openLogin();closeMobDropdown()"><i data-lucide="lock"></i> Login</button>
         </div>
       </div>`;
   }
@@ -1243,7 +1243,7 @@ function toggleWishlist(id, btn) {
   if (btn) {
     btn.classList.toggle('wishlisted');
     const ico = btn.querySelector('i');
-    if (ico) { ico.className = isWishlisted(id) ? 'fas fa-heart' : 'far fa-heart'; }
+    if (ico) { ico.setAttribute('data-lucide', 'heart'); }
   }
 }
 function shareProduct(id) {
@@ -1423,7 +1423,7 @@ function pcardHtml(p, idx = 0) {
     let tags = prioritizedSpecs.map((s) => specTagHtml(s)).join('');
     const remaining = allSpecs.length - prioritizedSpecs.length;
     if (remaining > 0)
-      tags += `<span class="spec-tag spec-more"><i class="fas fa-ellipsis-h" style="font-size:6px;margin-right:2px;opacity:.5"></i>+${remaining} specs</span>`;
+      tags += `<span class="spec-tag spec-more"><i data-lucide="ellipsis" style="font-size:6px;margin-right:2px;opacity:.5"></i>+${remaining} specs</span>`;
     specHtml = `<div class="pcard-specs">${tags}</div>`;
   }
   let varHtml = '';
@@ -1432,7 +1432,7 @@ function pcardHtml(p, idx = 0) {
       const totalOpts = p.variant_groups.reduce((s, g) => s + g.options.length, 0);
       const gCount = p.variant_groups.length;
       if (totalOpts > 4 || gCount > 2) {
-        varHtml = `<div class="var-tags"><span class="var-tag var-summary"><i class="fas fa-layer-group" style="font-size:7px;margin-right:3px;opacity:.6"></i>${totalOpts} pilihan</span></div>`;
+        varHtml = `<div class="var-tags"><span class="var-tag var-summary"><i data-lucide="layers" style="font-size:7px;margin-right:3px;opacity:.6"></i>${totalOpts} pilihan</span></div>`;
       } else {
         const tags = p.variant_groups
           .map(
@@ -1448,7 +1448,7 @@ function pcardHtml(p, idx = 0) {
     } else {
       const vCount = p.variants.length;
       if (vCount > 2) {
-        varHtml = `<div class="var-tags"><span class="var-tag var-summary"><i class="fas fa-layer-group" style="font-size:7px;margin-right:3px;opacity:.6"></i>${vCount} varian</span></div>`;
+        varHtml = `<div class="var-tags"><span class="var-tag var-summary"><i data-lucide="layers" style="font-size:7px;margin-right:3px;opacity:.6"></i>${vCount} varian</span></div>`;
       } else {
         const tags = p.variants
           .slice(0, 4)
@@ -1472,15 +1472,15 @@ function pcardHtml(p, idx = 0) {
   let stockHtml = `<div class="pcard-stock-row"><span class="stock-dot ${stockClass}"></span><span class="stock-text">${stockLabel}</span></div>`;
   const oosBadge = outStock ? '<div class="oos-badge">HABIS</div>' : '';
   const featBadge = p.featured
-    ? '<div class="featured-badge"><i class="fas fa-star"></i> UNGGULAN</div>'
+    ? '<div class="featured-badge"><i data-lucide="star"></i> UNGGULAN</div>'
     : '';
   const imgBadge =
     imgCount > 1
-      ? `<div class="img-indicator"><i class="fas fa-images" style="font-size:7px"></i> ${imgCount}</div>`
+      ? `<div class="img-indicator"><i data-lucide="images" style="font-size:7px"></i> ${imgCount}</div>`
       : '';
   const delay = Math.min(Math.floor(idx / 4) * 80, 800);
-  var askBtn = `<button class="pcard-ask-btn" onclick="event.stopPropagation();askProduct(${p.id})" title="Tanya tentang produk ini"><i class="fas fa-comment-dots"></i> Tanya Produk</button>`;
-  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms"><div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${featBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i class="fas fa-eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i class="fas fa-share-alt"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}${askBtn}</div></div>`;
+  var askBtn = `<button class="pcard-ask-btn" onclick="event.stopPropagation();askProduct(${p.id})" title="Tanya tentang produk ini"><i data-lucide="message-circle"></i> Tanya Produk</button>`;
+  return `<div class="pcard" onclick="openDetail(${p.id})" style="animation-delay:${delay}ms"><div class="pcard-img-wrap"><img class="pcard-img" src="${getImgSrc(p)}" alt="${esc(p.name)}" loading="lazy"> ${oosBadge}${featBadge}${disc.html || ''}${imgBadge}<div class="pcard-actions"><button class="pcard-action-btn${isWishlisted(p.id) ? ' wishlisted' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id},this)" title="Wishlist"><i class="fa${isWishlisted(p.id) ? 's' : 'r'} fa-heart"></i></button><button class="pcard-qv" onclick="event.stopPropagation();openQV(${p.id})" title="Quick View"><i data-lucide="eye"></i></button><button class="pcard-action-btn" onclick="event.stopPropagation();shareProduct(${p.id})" title="Share"><i data-lucide="share-2"></i></button></div></div><div class="pcard-body"><div class="pcard-brand">${getBrandHtml(p.brand, '14px')}</div><div class="pcard-title">${esc(p.name)}</div><div class="pcard-price-area">${priceHtml}</div>${specHtml}${varHtml}${stockHtml}${askBtn}</div></div>`;
 }
 function askProduct(id) {
   var p = (state.db.products || []).find(function (x) { return x.id === id; });
@@ -1498,7 +1498,7 @@ function renderCatalog() {
   const activePromos = (state.db.promos || []).filter((p) => p.active);
   if (activePromos.length && ps) {
     ps.style.display = '';
-    ps.innerHTML = `<div class="promo-slider"><button class="promo-slider-btn prev" id="promoPrev"><i class="fas fa-chevron-left"></i></button><button class="promo-slider-btn next" id="promoNext"><i class="fas fa-chevron-right"></i></button><div class="promo-slider-track" id="promoSliderTrack">${activePromos.map((p, i) => `<div class="promo-slide" style="${p.image ? `background-image:url('${esc(p.image)}')` : 'background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)'}"><div class="promo-slide-body"><h3>${esc(p.title)}</h3><p>${esc(p.description || '')}</p></div></div>`).join('')}</div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
+    ps.innerHTML = `<div class="promo-slider"><button class="promo-slider-btn prev" id="promoPrev"><i data-lucide="chevron-left"></i></button><button class="promo-slider-btn next" id="promoNext"><i data-lucide="chevron-right"></i></button><div class="promo-slider-track" id="promoSliderTrack">${activePromos.map((p, i) => `<div class="promo-slide" style="${p.image ? `background-image:url('${esc(p.image)}')` : 'background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)'}"><div class="promo-slide-body"><h3>${esc(p.title)}</h3><p>${esc(p.description || '')}</p></div></div>`).join('')}</div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
     setTimeout(initPromoSlider, 100);
   } else if (ps) { ps.style.display = 'none'; }
   const exploreEl = document.getElementById('exploreSection');
@@ -1512,10 +1512,10 @@ function renderCatalog() {
   const bestSelling = [...active].filter((p) => (p.sold || 0) > 40).sort((a, b) => (b.sold || 0) - (a.sold || 0));
   const discounted = active.filter((p) => getDiscount(p));
   const TABS = [
-    { key: 'featured', icon: 'fas fa-star', label: 'Unggulan', items: feat },
-    { key: 'newest', icon: 'fas fa-clock', label: 'Terbaru', items: newest },
-    { key: 'bestselling', icon: 'fas fa-fire', label: 'Terlaris', items: bestSelling },
-    { key: 'discounted', icon: 'fas fa-tags', label: 'Diskon', items: discounted },
+    { key: 'featured', icon: 'star', label: 'Unggulan', items: feat },
+    { key: 'newest', icon: 'clock', label: 'Terbaru', items: newest },
+    { key: 'bestselling', icon: 'flame', label: 'Terlaris', items: bestSelling },
+    { key: 'discounted', icon: 'tags', label: 'Diskon', items: discounted },
   ];
   const catQ = (document.getElementById('catSearch').value || '').trim();
   const brandVal = (document.getElementById('filterBrand').value || '').trim();
@@ -1526,7 +1526,7 @@ function renderCatalog() {
   if (hasAnyTab && !hasFilter) {
     exploreEl.style.display = '';
     tabsEl.innerHTML = TABS.filter((t) => t.items.length > 0)
-      .map((t) => `<button class="explore-tab${state.catalog.exploreTab === t.key ? ' active' : ''}" onclick="switchExploreTab('${t.key}')"><span class="explore-tab-icon"><i class="${t.icon}"></i></span><span class="explore-tab-label">${t.label}</span><span class="explore-tab-count">${t.items.length}</span></button>`)
+      .map((t) => `<button class="explore-tab${state.catalog.exploreTab === t.key ? ' active' : ''}" onclick="switchExploreTab('${t.key}')"><span class="explore-tab-icon"><i data-lucide="${t.icon}"></i></span><span class="explore-tab-label">${t.label}</span><span class="explore-tab-count">${t.items.length}</span></button>`)
       .join('');
     renderExploreContent(TABS);
   } else {
@@ -1587,7 +1587,7 @@ function renderCatPage() {
     document.getElementById('catCount').textContent = filtered.length;
     const grid = document.getElementById('catGrid');
     grid.innerHTML = pageItems.map((p, i) => pcardHtml(p, i)).join('');
-    grid.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:20px"><button class="see-all-btn" onclick="state.catalog.showAll=true;renderCatalog()" style="margin:0 auto"><i class="fas fa-th"></i> Lihat Semua Produk (${filtered.length})</button></div>`;
+    grid.innerHTML += `<div style="grid-column:1/-1;text-align:center;padding:20px"><button class="see-all-btn" onclick="state.catalog.showAll=true;renderCatalog()" style="margin:0 auto"><i data-lucide="grid-3x3"></i> Lihat Semua Produk (${filtered.length})</button></div>`;
     const c = document.getElementById('catPagination');
     c.innerHTML = '';
     c.style.display = 'none';
@@ -1607,9 +1607,9 @@ function renderCatPage() {
           : '')
       : '';
     const resetBtn = hasFilter
-      ? `<button class="empty-state-cta" onclick="resetFilters()"><i class="fas fa-rotate-left"></i> Reset Semua Filter</button>`
+      ? `<button class="empty-state-cta" onclick="resetFilters()"><i data-lucide="rotate-ccw"></i> Reset Semua Filter</button>`
       : '';
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon"><i class="fas fa-box-open"></i></div><h3>Produk tidak ditemukan</h3><p>${hasFilter ? 'Tidak ada produk untuk ' + filterDesc : 'Belum ada produk yang tersedia'}</p>${resetBtn}</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon"><i data-lucide="package-open"></i></div><h3>Produk tidak ditemukan</h3><p>${hasFilter ? 'Tidak ada produk untuk ' + filterDesc : 'Belum ada produk yang tersedia'}</p>${resetBtn}</div>`;
   } else {
     grid.innerHTML = pageItems.map((p, i) => pcardHtml(p, i)).join('');
   }
@@ -1623,7 +1623,7 @@ function renderCatPagination(total, totalPages) {
     return;
   }
   c.style.display = 'flex';
-  let h = `<button class="pg-btn" onclick="goCatPage(${state.catalog.page - 1})" ${state.catalog.page <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+  let h = `<button class="pg-btn" onclick="goCatPage(${state.catalog.page - 1})" ${state.catalog.page <= 1 ? 'disabled' : ''}><i data-lucide="chevron-left"></i></button>`;
   const pages = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);
@@ -1642,7 +1642,7 @@ function renderCatPagination(total, totalPages) {
       h += `<button class="pg-btn${pg === state.catalog.page ? ' active' : ''}" onclick="goCatPage(${pg})">${pg}</button>`;
     }
   });
-  h += `<button class="pg-btn" onclick="goCatPage(${state.catalog.page + 1})" ${state.catalog.page >= totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+  h += `<button class="pg-btn" onclick="goCatPage(${state.catalog.page + 1})" ${state.catalog.page >= totalPages ? 'disabled' : ''}><i data-lucide="chevron-right"></i></button>`;
   const start = (state.catalog.page - 1) * CAT_PP + 1,
     end = Math.min(state.catalog.page * CAT_PP, total);
   h += `<span style="color:var(--muted);font-size:10px;margin-left:8px;white-space:nowrap">${start}-${end} dari ${total}</span>`;
@@ -1665,7 +1665,7 @@ function renderCatChips() {
   c.innerHTML = all
     .map((cat) => {
       const catObj = activeCats.find((ac) => ac.name === cat);
-      const icon = cat === 'Semua' ? '<i class="fas fa-th" style="font-size:13px;margin-right:5px"></i>' : (catObj ? getCatIconHtmlManaged(catObj, '13px') + '<span style="margin-right:5px"></span>' : '');
+      const icon = cat === 'Semua' ? '<i data-lucide="grid-3x3" style="font-size:13px;margin-right:5px"></i>' : (catObj ? getCatIconHtmlManaged(catObj, '13px') + '<span style="margin-right:5px"></span>' : '');
       return `<button class="cat-chip${state.catalog.activeFilter === cat ? ' active' : ''}" onclick="setCatFilter('${cat.replace(/'/g, "\\'")}')">${icon}${cat}</button>`;
     })
     .join('');
@@ -1730,17 +1730,17 @@ function openQV(id) {
     <div style="position:relative">
       <img class="qv-img" src="${img}" alt="${esc(p.name)}">
       ${d ? `<div class="discount-badge">${d.percent}% OFF</div>` : ''}
-      <button class="qv-close" onclick="closeQV()" aria-label="Tutup"><i class="fas fa-times"></i></button>
+      <button class="qv-close" onclick="closeQV()" aria-label="Tutup"><i data-lucide="x"></i></button>
     </div>
     <div class="qv-body">
       <div class="qv-brand" style="margin-bottom:4px">${getBrandHtml(p.brand, '16px')}</div>
       <div class="qv-name">${esc(p.name)}</div>
       ${priceHtml}
-      <div class="qv-stock">${p.stock > 5 ? '<i class="fas fa-check-circle" style="color:#16a34a;margin-right:4px"></i>Stok tersedia (' + p.stock + ')' : p.stock > 0 ? '<i class="fas fa-exclamation-circle" style="color:var(--warning);margin-right:4px"></i>Stok terbatas (' + p.stock + ')' : '<i class="fas fa-times-circle" style="color:var(--danger);margin-right:4px"></i>Stok habis'}</div>
+      <div class="qv-stock">${p.stock > 5 ? '<i data-lucide="circle-check" style="color:#16a34a;margin-right:4px"></i>Stok tersedia (' + p.stock + ')' : p.stock > 0 ? '<i data-lucide="circle-alert" style="color:var(--warning);margin-right:4px"></i>Stok terbatas (' + p.stock + ')' : '<i data-lucide="circle-x" style="color:var(--danger);margin-right:4px"></i>Stok habis'}</div>
       ${specs.length ? `<div class="qv-specs">${specs.map((s) => `<span>${esc(s)}</span>`).join('')}</div>` : ''}
       <div class="qv-actions" style="flex-direction:column;gap:8px;margin-top:12px">
         <a class="btn btn-wa btn-sm${p.stock <= 0 ? ' disabled' : ''}" style="width:100%;justify-content:center" href="${p.stock <= 0 ? 'javascript:void(0)' : 'https://wa.me/' + getActiveWA() + '?text=' + wm}" target="${p.stock <= 0 ? '_self' : '_blank'}"><i class="fab fa-whatsapp"></i> ${p.stock <= 0 ? 'Stok Habis' : 'Tanya via WhatsApp'}</a>
-        <button class="btn btn-ghost btn-sm" onclick="closeQV();openDetail(${p.id})" style="width:100%;justify-content:center"><i class="fas fa-expand"></i> Lihat Detail Lengkap</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeQV();openDetail(${p.id})" style="width:100%;justify-content:center"><i data-lucide="maximize"></i> Lihat Detail Lengkap</button>
       </div>
     </div>`;
   document.getElementById('qvOverlay').classList.add('show');
@@ -1814,7 +1814,7 @@ function openDetail(id) {
     .join('');
   const imgCounter =
     imgs.length > 1
-      ? `<div class="detail-img-counter"><i class="fas fa-images" style="margin-right:4px;font-size:10px"></i>1 / ${imgs.length}</div>`
+      ? `<div class="detail-img-counter"><i data-lucide="images" style="margin-right:4px;font-size:10px"></i>1 / ${imgs.length}</div>`
       : '';
   const dots =
     imgs.length > 1
@@ -1868,7 +1868,7 @@ function openDetail(id) {
     initStock > 5 ? 'fa-check-circle' : initStock > 0 ? 'fa-exclamation-circle' : 'fa-times-circle';
   const stockLabel = initStock > 5 ? 'Tersedia' : initStock > 0 ? 'Stok Terbatas' : 'Habis';
   document.getElementById('detailBox').innerHTML =
-    `<div class="detail-grid"><div class="detail-left"><img class="detail-img-bg" id="dBg" src="${esc(imgs[0])}" alt=""><div class="detail-img-wrap"><img class="detail-img-main" id="dMain" src="${esc(imgs[0])}" alt="${esc(p.name)}" onclick="openZoom(this.src)" style="cursor:zoom-in">${imgCounter}<div class="zoom-hint" onclick="openZoom(document.getElementById('dMain').src)" title="Zoom"><i class="fas fa-search-plus"></i></div>${dots}</div><div class="detail-thumbs">${th}</div></div><div class="detail-info">${catLabel ? `<div class="detail-cat"><i class="fas fa-tag"></i> ${esc(catLabel)}</div>` : ''}<div class="detail-brand">${getBrandHtml(p.brand, '18px')}</div><div class="detail-name">${esc(p.name)}</div>${disc ? `<div class="discount-badge" style="position:static;display:inline-block;margin-bottom:6px">${disc.percent}% OFF</div>` : ''}<div id="dPriceWrap">${disc ? `<div class="price-original" style="font-size:14px">${fmt(p.price)}</div><div class="detail-price" id="dPrice" data-disc-pct="${disc.percent}" data-disc-ratio="${(disc.discountedPrice / p.price).toFixed(6)}">${fmt(initPrice)}</div>` : `<div class="detail-price" id="dPrice">${fmt(initPrice)}</div>`}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.featured ? '<span class="badge badge-gold"><i class="fas fa-star" style="margin-right:4px"></i>Unggulan</span>' : ''}<span class="badge ${initStock > 5 ? 'badge-green' : initStock > 0 ? 'badge-yellow' : 'badge-red'}" id="dStockBadge"><i class="fas ${stockIcon}" style="margin-right:4px"></i>${stockLabel}${initStock > 0 ? ' (' + initStock + ')' : ''}</span></div><div class="detail-desc">${esc(p.description || 'Tidak ada deskripsi.')}</div>${sr ? `<table class="spec-table">${sr}</table>` : ''}${vh}<div class="wa-section"><a class="btn btn-wa${initStock <= 0 ? ' disabled' : ''}" style="width:100%;justify-content:center" href="${initStock <= 0 ? 'javascript:void(0)' : 'https://wa.me/' + getActiveWA() + '?text=' + wm}" target="${initStock <= 0 ? '_self' : '_blank'}"><i class="fab fa-whatsapp" style="margin-right:6px"></i> ${initStock <= 0 ? 'Stok Habis' : 'Tanya via WhatsApp'}</a><div class="wa-trust-row"><span><i class="fas fa-shield-alt"></i> Original</span><span><i class="fas fa-medal"></i> Garansi Resmi</span><span><i class="fas fa-truck"></i> Pengiriman Cepat</span></div></div></div></div>`;
+    `<div class="detail-grid"><div class="detail-left"><img class="detail-img-bg" id="dBg" src="${esc(imgs[0])}" alt=""><div class="detail-img-wrap"><img class="detail-img-main" id="dMain" src="${esc(imgs[0])}" alt="${esc(p.name)}" onclick="openZoom(this.src)" style="cursor:zoom-in">${imgCounter}<div class="zoom-hint" onclick="openZoom(document.getElementById('dMain').src)" title="Zoom"><i data-lucide="zoom-in"></i></div>${dots}</div><div class="detail-thumbs">${th}</div></div><div class="detail-info">${catLabel ? `<div class="detail-cat"><i data-lucide="tag"></i> ${esc(catLabel)}</div>` : ''}<div class="detail-brand">${getBrandHtml(p.brand, '18px')}</div><div class="detail-name">${esc(p.name)}</div>${disc ? `<div class="discount-badge" style="position:static;display:inline-block;margin-bottom:6px">${disc.percent}% OFF</div>` : ''}<div id="dPriceWrap">${disc ? `<div class="price-original" style="font-size:14px">${fmt(p.price)}</div><div class="detail-price" id="dPrice" data-disc-pct="${disc.percent}" data-disc-ratio="${(disc.discountedPrice / p.price).toFixed(6)}">${fmt(initPrice)}</div>` : `<div class="detail-price" id="dPrice">${fmt(initPrice)}</div>`}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.featured ? '<span class="badge badge-gold"><i data-lucide="star" style="margin-right:4px"></i>Unggulan</span>' : ''}<span class="badge ${initStock > 5 ? 'badge-green' : initStock > 0 ? 'badge-yellow' : 'badge-red'}" id="dStockBadge"><i class="fas ${stockIcon}" style="margin-right:4px"></i>${stockLabel}${initStock > 0 ? ' (' + initStock + ')' : ''}</span></div><div class="detail-desc">${esc(p.description || 'Tidak ada deskripsi.')}</div>${sr ? `<table class="spec-table">${sr}</table>` : ''}${vh}<div class="wa-section"><a class="btn btn-wa${initStock <= 0 ? ' disabled' : ''}" style="width:100%;justify-content:center" href="${initStock <= 0 ? 'javascript:void(0)' : 'https://wa.me/' + getActiveWA() + '?text=' + wm}" target="${initStock <= 0 ? '_self' : '_blank'}"><i class="fab fa-whatsapp" style="margin-right:6px"></i> ${initStock <= 0 ? 'Stok Habis' : 'Tanya via WhatsApp'}</a><div class="wa-trust-row"><span><i data-lucide="shield-check"></i> Original</span><span><i data-lucide="award"></i> Garansi Resmi</span><span><i data-lucide="truck"></i> Pengiriman Cepat</span></div></div></div></div>`;
   document
     .getElementById('detailBox')
     .querySelectorAll('.detail-thumb[data-main-img]')
@@ -1909,7 +1909,7 @@ function gotoDetailSlide(idx) {
   dots.forEach((d, i) => d.classList.toggle('active', i === idx));
   const counter = document.querySelector('.detail-img-counter');
   if (counter)
-    counter.innerHTML = `<i class="fas fa-images" style="margin-right:4px;font-size:10px"></i>${idx + 1} / ${state.ui.detailSlide.imgs.length}`;
+    counter.innerHTML = `<i data-lucide="images" style="margin-right:4px;font-size:10px"></i>${idx + 1} / ${state.ui.detailSlide.imgs.length}`;
 }
 function setupDetailSlideEvents() {
   const wrap = document.querySelector('#detailBox .detail-img-wrap');
@@ -2013,12 +2013,12 @@ function renderBranchList(el) {
   const ca = pm.branches_add,
     ce = pm.branches_edit,
     cd = pm.branches_delete;
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-store-alt"></i> Daftar Cabang (${state.db.branches.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openBranchForm()"><i class="fas fa-plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="store"></i> Daftar Cabang (${state.db.branches.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openBranchForm()"><i data-lucide="plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${
     state.db.branches.length
       ? `<div class="branch-card-inner">${state.db.branches
-          .map((b) => { const wa = b.wa_number || ''; return `<div class="branch-card"><div class="branch-card-icon"><i class="fas fa-store-alt"></i></div><div class="branch-card-body"><div class="branch-card-name">${esc(b.name)}${b.is_default ? '<span class="badge badge-gold" style="font-size:8px">Default</span>' : ''}<span class="badge ${b.active ? 'badge-green' : 'badge-red'}" style="font-size:8px">${b.active ? 'Aktif' : 'Nonaktif'}</span></div><div class="branch-card-addr">${esc(b.address || 'Belum ada alamat')}</div><div class="branch-card-meta">${wa ? `<div class="branch-card-meta-item"><i class="fab fa-whatsapp"></i>${esc(fmtPhone(wa))}</div>` : ''}${b.phone ? `<div class="branch-card-meta-item"><i class="fas fa-phone"></i>${esc(fmtPhone(b.phone))}</div>` : ''}${b.email ? `<div class="branch-card-meta-item"><i class="fas fa-envelope"></i>${esc(b.email)}</div>` : ''}</div></div><div class="branch-card-actions">${ce ? `<button class="btn btn-info btn-sm" onclick="openBranchForm(${b.id})"><i class="fas fa-pen"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delBranch(${b.id})"><i class="fas fa-trash"></i></button>` : ''}</div></div>`; })
+          .map((b) => { const wa = b.wa_number || ''; return `<div class="branch-card"><div class="branch-card-icon"><i data-lucide="store"></i></div><div class="branch-card-body"><div class="branch-card-name">${esc(b.name)}${b.is_default ? '<span class="badge badge-gold" style="font-size:8px">Default</span>' : ''}<span class="badge ${b.active ? 'badge-green' : 'badge-red'}" style="font-size:8px">${b.active ? 'Aktif' : 'Nonaktif'}</span></div><div class="branch-card-addr">${esc(b.address || 'Belum ada alamat')}</div><div class="branch-card-meta">${wa ? `<div class="branch-card-meta-item"><i class="fab fa-whatsapp"></i>${esc(fmtPhone(wa))}</div>` : ''}${b.phone ? `<div class="branch-card-meta-item"><i data-lucide="phone"></i>${esc(fmtPhone(b.phone))}</div>` : ''}${b.email ? `<div class="branch-card-meta-item"><i data-lucide="mail"></i>${esc(b.email)}</div>` : ''}</div></div><div class="branch-card-actions">${ce ? `<button class="btn btn-info btn-sm" onclick="openBranchForm(${b.id})"><i data-lucide="pencil"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delBranch(${b.id})"><i data-lucide="trash-2"></i></button>` : ''}</div></div>`; })
           .join('')}</div>`
-      : '<div class="empty-state" style="padding:30px"><i class="fas fa-store-alt"></i><p>Belum ada cabang</p></div>'
+      : '<div class="empty-state" style="padding:30px"><i data-lucide="store"></i><p>Belum ada cabang</p></div>'
   }</div></div>`;
 }
 function renderSocialMedia(el) {
@@ -2032,19 +2032,23 @@ function renderSocialMedia(el) {
         const soc = b.socials || {};
         const entries = Object.entries(soc).filter(([, v]) => typeof v === 'string' && v.trim());
         const waNums = Array.isArray(b.wa_numbers) ? b.wa_numbers.filter((w) => w.number) : [];
-        return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;transition:border-color .2s" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><strong>${esc(b.name)}</strong>${b.is_default ? ' <span class="badge badge-gold" style="font-size:10px">Default</span>' : ''}</div>${ce ? `<button class="btn btn-info btn-sm" onclick="state.editor.socialBranch=${b.id};renderDash()"><i class="fas fa-pen"></i> Edit</button>` : ''}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${waNums.map((w) => `<a href="https://wa.me/${normalizeWA(w.number)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--fg);transition:all .2s;font-size:11px" onmouseenter="this.style.borderColor='#25D366';this.style.background='rgba(37,211,102,0.06)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='transparent'"><div style="width:24px;height:24px;border-radius:6px;background:rgba(37,211,102,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fab fa-whatsapp" style="color:#25D366;font-size:13px"></i></div><span style="color:var(--muted)">${waNums.length > 1 ? (w.active ? 'WA ' + esc(w.label || 'Aktif') : esc(w.label || 'WA')) : 'WhatsApp'}</span></a>`).join('')}${entries
+        return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;transition:border-color .2s" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><strong>${esc(b.name)}</strong>${b.is_default ? ' <span class="badge badge-gold" style="font-size:10px">Default</span>' : ''}</div>${ce ? `<button class="btn btn-info btn-sm" onclick="state.editor.socialBranch=${b.id};renderDash()"><i data-lucide="pencil"></i> Edit</button>` : ''}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${waNums.map((w) => `<a href="https://wa.me/${normalizeWA(w.number)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--fg);transition:all .2s;font-size:11px" onmouseenter="this.style.borderColor='#25D366';this.style.background='rgba(37,211,102,0.06)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='transparent'"><div style="width:24px;height:24px;border-radius:6px;background:rgba(37,211,102,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fab fa-whatsapp" style="color:#25D366;font-size:13px"></i></div><span style="color:var(--muted)">${waNums.length > 1 ? (w.active ? 'WA ' + esc(w.label || 'Aktif') : esc(w.label || 'WA')) : 'WhatsApp'}</span></a>`).join('')}${entries
           .map(([k, v]) => {
             const sp = SOCIAL_PLATFORMS[k] || {};
-            const ic = sp.icon || 'fas fa-link',
+            const ic = sp.icon || 'link',
               cl = sp.color || '#555';
-            return `<a href="${esc(v)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--fg);transition:all .2s;font-size:11px" onmouseenter="this.style.borderColor='${cl}';this.style.background='${cl}0F'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='transparent'"><div style="width:24px;height:24px;border-radius:6px;background:${cl}1A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="${ic}" style="font-size:13px;color:${cl}"></i></div><span style="color:var(--muted)">${esc(sp.label || k)}</span></a>`;
+            const isFa = ic.startsWith('fab') || ic.startsWith('fas');
+            const iconHtml = isFa
+              ? `<i class="${ic}" style="font-size:13px;color:${cl}"></i>`
+              : `<i data-lucide="${ic}" style="width:13px;height:13px;color:${cl}"></i>`;
+            return `<a href="${esc(v)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--fg);transition:all .2s;font-size:11px" onmouseenter="this.style.borderColor='${cl}';this.style.background='${cl}0F'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='transparent'"><div style="width:24px;height:24px;border-radius:6px;background:${cl}1A;display:flex;align-items:center;justify-content:center;flex-shrink:0">${iconHtml}</div><span style="color:var(--muted)">${esc(sp.label || k)}</span></a>`;
           })
           .join(
             ''
           )}</div>${!waNums.length && !entries.length ? '<div style="color:var(--muted);font-size:12px">Belum ada sosial media</div>' : ''}</div>`;
       })
       .join('') ||
-    '<div class="empty-state"><i class="fas fa-share-alt"></i><p>Belum ada cabang aktif</p></div>'
+    '<div class="empty-state"><i data-lucide="share-2"></i><p>Belum ada cabang aktif</p></div>'
   }</div></div>`;
 }
 function renderSocialEdit(el) {
@@ -2082,17 +2086,17 @@ function renderSocialEdit(el) {
             )
             .join(
               ''
-            )}</select><input class="form-input" style="flex:2;min-width:0" value="${esc(v)}" placeholder="https://..." onchange="changeSocialUrl(${i},this.value)"><button class="btn btn-danger btn-sm" onclick="removeSocial(${i})" style="min-width:36px;flex-shrink:0"><i class="fas fa-times"></i></button></div>`
+            )}</select><input class="form-input" style="flex:2;min-width:0" value="${esc(v)}" placeholder="https://..." onchange="changeSocialUrl(${i},this.value)"><button class="btn btn-danger btn-sm" onclick="removeSocial(${i})" style="min-width:36px;flex-shrink:0"><i data-lucide="x"></i></button></div>`
       )
       .join('') ||
     '<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Belum ada sosial media</div>';
   const waRows = (bk.wa_numbers || [])
     .map(
       (w, i) =>
-        `<div class="wa-row" style="margin-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0"><input type="radio" name="socWaActive" ${w.active ? 'checked' : ''} onchange="setWaActive(${i})" style="accent-color:var(--accent)"> <span style="font-size:12px;font-weight:600;${w.active ? 'color:var(--accent)' : ''}">${w.active ? 'Aktif' : ''}</span></label><input class="form-input" style="flex:1;min-width:60px" value="${esc(w.label || '')}" placeholder="Label" onchange="updateWaField(${i},'label',this.value)"><input class="form-input" style="flex:2;min-width:0" value="${esc(w.number || '')}" placeholder="628xxx" onchange="updateWaField(${i},'number',this.value)"><button class="btn btn-danger btn-sm" onclick="removeWaNum(${i})" style="min-width:36px;flex-shrink:0"${(bk.wa_numbers || []).length <= 1 ? ' disabled' : ''}><i class="fas fa-times"></i></button></div>`
+        `<div class="wa-row" style="margin-bottom:8px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0"><input type="radio" name="socWaActive" ${w.active ? 'checked' : ''} onchange="setWaActive(${i})" style="accent-color:var(--accent)"> <span style="font-size:12px;font-weight:600;${w.active ? 'color:var(--accent)' : ''}">${w.active ? 'Aktif' : ''}</span></label><input class="form-input" style="flex:1;min-width:60px" value="${esc(w.label || '')}" placeholder="Label" onchange="updateWaField(${i},'label',this.value)"><input class="form-input" style="flex:2;min-width:0" value="${esc(w.number || '')}" placeholder="628xxx" onchange="updateWaField(${i},'number',this.value)"><button class="btn btn-danger btn-sm" onclick="removeWaNum(${i})" style="min-width:36px;flex-shrink:0"${(bk.wa_numbers || []).length <= 1 ? ' disabled' : ''}><i data-lucide="x"></i></button></div>`
     )
     .join('');
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.editor.socialBranch=null;state.editor.branch=null;renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><h3 style="margin-bottom:16px"><i class="fas fa-store-alt" style="color:var(--accent);margin-right:8px"></i>${esc(b.name)}</h3><div class="form-group"><label class="form-label" style="margin-bottom:8px;display:block">Nomor WhatsApp</label>${waRows || '<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Belum ada nomor</div>'}<button class="btn btn-ghost btn-sm" onclick="addWaNum()"><i class="fas fa-plus"></i> Tambah Nomor</button></div><div class="form-group" style="margin-top:16px"><label class="form-label" style="margin-bottom:8px;display:block">Sosial Media & Link</label>${socialRows}<button class="btn btn-ghost btn-sm" onclick="addSocial()"><i class="fas fa-plus"></i> Tambah Platform</button></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.editor.socialBranch=null;state.editor.branch=null;renderDash()">Batal</button><button class="btn btn-primary" onclick="saveSocialBranch()"><i class="fas fa-save"></i> Simpan</button></div></div></div>`;
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.editor.socialBranch=null;state.editor.branch=null;renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><h3 style="margin-bottom:16px"><i data-lucide="store" style="color:var(--accent);margin-right:8px"></i>${esc(b.name)}</h3><div class="form-group"><label class="form-label" style="margin-bottom:8px;display:block">Nomor WhatsApp</label>${waRows || '<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Belum ada nomor</div>'}<button class="btn btn-ghost btn-sm" onclick="addWaNum()"><i data-lucide="plus"></i> Tambah Nomor</button></div><div class="form-group" style="margin-top:16px"><label class="form-label" style="margin-bottom:8px;display:block">Sosial Media & Link</label>${socialRows}<button class="btn btn-ghost btn-sm" onclick="addSocial()"><i data-lucide="plus"></i> Tambah Platform</button></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.editor.socialBranch=null;state.editor.branch=null;renderDash()">Batal</button><button class="btn btn-primary" onclick="saveSocialBranch()"><i data-lucide="floppy-disk"></i> Simpan</button></div></div></div>`;
 }
 async function saveSocialBranch() {
   const bk = state.editor.branch;
@@ -2159,15 +2163,15 @@ function renderBranchForm() {
   const hoursRows = (b.hours || [])
     .map(
       (h, i) =>
-        `<div class="hours-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input class="form-input" style="flex:1" value="${esc(h.day)}" placeholder="Hari" onchange="state.editor.branch.hours[${i}].day=this.value"><input class="form-input" style="width:160px" value="${esc(h.time)}" placeholder="Jam" onchange="state.editor.branch.hours[${i}].time=this.value"><button class="btn btn-danger btn-sm" onclick="state.editor.branch.hours.splice(${i},1);renderBranchForm()" style="min-width:36px"><i class="fas fa-times"></i></button></div>`
+        `<div class="hours-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input class="form-input" style="flex:1" value="${esc(h.day)}" placeholder="Hari" onchange="state.editor.branch.hours[${i}].day=this.value"><input class="form-input" style="width:160px" value="${esc(h.time)}" placeholder="Jam" onchange="state.editor.branch.hours[${i}].time=this.value"><button class="btn btn-danger btn-sm" onclick="state.editor.branch.hours.splice(${i},1);renderBranchForm()" style="min-width:36px"><i data-lucide="x"></i></button></div>`
     )
     .join('');
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='branches';renderSide();renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="edit-tabs"><button class="edit-tab ${state.editor.tab === 'info' ? 'active' : ''}" onclick="state.editor.tab='info';renderBranchForm()"><i class="fas fa-info-circle"></i> Info</button><button class="edit-tab ${state.editor.tab === 'hours' ? 'active' : ''}" onclick="state.editor.tab='hours';renderBranchForm()"><i class="fas fa-clock"></i> Jam Operasional</button><button class="edit-tab ${state.editor.tab === 'location' ? 'active' : ''}" onclick="state.editor.tab='location';renderBranchForm()"><i class="fas fa-map-marker-alt"></i> Lokasi & Kontak</button><button class="edit-tab ${state.editor.tab === 'bstatus' ? 'active' : ''}" onclick="state.editor.tab='bstatus';renderBranchForm()"><i class="fas fa-toggle-on"></i> Status</button></div>
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='branches';renderSide();renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="edit-tabs"><button class="edit-tab ${state.editor.tab === 'info' ? 'active' : ''}" onclick="state.editor.tab='info';renderBranchForm()"><i data-lucide="circle-info"></i> Info</button><button class="edit-tab ${state.editor.tab === 'hours' ? 'active' : ''}" onclick="state.editor.tab='hours';renderBranchForm()"><i data-lucide="clock"></i> Jam Operasional</button><button class="edit-tab ${state.editor.tab === 'location' ? 'active' : ''}" onclick="state.editor.tab='location';renderBranchForm()"><i data-lucide="map-pin"></i> Lokasi & Kontak</button><button class="edit-tab ${state.editor.tab === 'bstatus' ? 'active' : ''}" onclick="state.editor.tab='bstatus';renderBranchForm()"><i data-lucide="toggle-right"></i> Status</button></div>
   <div class="etab ${state.editor.tab === 'info' ? 'active' : ''}"><div class="form-grid-2"><div class="form-group" style="grid-column:1/-1"><label class="form-label">Nama Cabang</label><input class="form-input" value="${esc(b.name)}" onchange="state.editor.branch.name=this.value" placeholder="Gadget 5tore Jakarta Pusat"></div><div class="form-group" style="grid-column:1/-1"><label class="form-label">Alamat</label><textarea class="form-input" rows="2" onchange="state.editor.branch.address=this.value" placeholder="Alamat lengkap toko">${esc(b.address || '')}</textarea></div><div class="form-group"><label class="form-label">Telepon</label><input class="form-input" value="${esc(b.phone || '')}" onchange="state.editor.branch.phone=this.value" placeholder="021-555-1234"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${esc(b.email || '')}" onchange="state.editor.branch.email=this.value" placeholder="email@toko.com"></div></div></div>
-  <div class="etab ${state.editor.tab === 'hours' ? 'active' : ''}"><label class="form-label" style="margin-bottom:8px;display:block">Jam Operasional</label>${hoursRows || '<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Belum ada jam operasional</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.branch.hours.push({day:'',time:''});renderBranchForm()"><i class="fas fa-plus"></i> Tambah Baris</button></div>
+  <div class="etab ${state.editor.tab === 'hours' ? 'active' : ''}"><label class="form-label" style="margin-bottom:8px;display:block">Jam Operasional</label>${hoursRows || '<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Belum ada jam operasional</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.branch.hours.push({day:'',time:''});renderBranchForm()"><i data-lucide="plus"></i> Tambah Baris</button></div>
   <div class="etab ${state.editor.tab === 'location' ? 'active' : ''}"><div class="form-group"><label class="form-label">Nomor WhatsApp Utama</label><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Nomor ini dipakai saat pembeli klik "Tanya via WhatsApp". Untuk mengelola beberapa nomor, gunakan panel <strong>Sosial Media</strong>.</div><input class="form-input" value="${esc(b.wa_number || '')}" onchange="state.editor.branch.wa_number=this.value" placeholder="628xxxxxxxxxx"></div><div class="form-group" style="margin-top:16px"><label class="form-label">Link Google Maps (embed URL)</label><input class="form-input" value="${esc(b.map_url || '')}" onchange="state.editor.branch.map_url=this.value" placeholder="https://maps.google.com/maps?q=...&output=embed"></div>${b.map_url ? `<div style="margin-top:8px"><iframe src="${esc(b.map_url)}" style="width:100%;height:180px;border:none;border-radius:var(--radius-sm);border:1px solid var(--border)" allowfullscreen loading="lazy"></iframe></div>` : ''}</div>
-  <div class="etab ${state.editor.tab === 'bstatus' ? 'active' : ''}"><div class="status-checks"><label class="status-check"><input type="checkbox" ${b.active ? 'checked' : ''} onchange="state.editor.branch.active=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Cabang tampil di halaman publik dan selector footer</div></span></label><label class="status-check"><input type="checkbox" ${b.is_default ? 'checked' : ''} onchange="state.editor.branch.is_default=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Cabang Default</div><div class="sc-desc">Cabang yang otomatis dipilih saat pengguna membuka website (hanya satu)</div></span></label></div></div>
-  <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='branches';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveBranch()"><i class="fas fa-save"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
+  <div class="etab ${state.editor.tab === 'bstatus' ? 'active' : ''}"><div class="status-checks"><label class="status-check"><input type="checkbox" ${b.active ? 'checked' : ''} onchange="state.editor.branch.active=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Cabang tampil di halaman publik dan selector footer</div></span></label><label class="status-check"><input type="checkbox" ${b.is_default ? 'checked' : ''} onchange="state.editor.branch.is_default=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Cabang Default</div><div class="sc-desc">Cabang yang otomatis dipilih saat pengguna membuka website (hanya satu)</div></span></label></div></div>
+  <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='branches';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveBranch()"><i data-lucide="floppy-disk"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
 }
 async function saveBranch() {
   const b = state.editor.branch;
@@ -2292,7 +2296,7 @@ function updateWaField(idx, field, val) { if (state.editor.branch.wa_numbers[idx
 function renderPromoList(el) {
   const pm = state.session.currentUser ? ROLES[state.session.currentUser.role]?.perms || {} : {};
   const ca = pm.promos_manage;
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-bullhorn"></i> Daftar Promo (${state.db.promos.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openPromoForm()"><i class="fas fa-plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${state.db.promos.length ? `<div class="branch-card-inner">${state.db.promos.map((p) => `<div style="display:flex;gap:14px;align-items:center;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;transition:all .25s var(--ease)" onmouseenter="this.style.borderColor='rgba(var(--accent-rgb),.2)';this.style.transform='translateY(-1px)';this.style.boxShadow='var(--sh-sm)'" onmouseleave="this.style.borderColor='var(--border)';this.style.transform='';this.style.boxShadow=''"><div style="width:80px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">${p.image ? `<img src="${esc(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-image" style="font-size:18px;color:var(--muted)"></i>'}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description || 'Tanpa deskripsi')}</div></div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span class="badge ${p.active ? 'badge-green' : 'badge-red'}" style="font-size:10px">${p.active ? 'Aktif' : 'Nonaktif'}</span>${ca ? `<button class="btn btn-info btn-sm" onclick="openPromoForm(${p.id})"><i class="fas fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="delPromo(${p.id})"><i class="fas fa-trash"></i></button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty-state" style="padding:30px"><i class="fas fa-bullhorn"></i><p>Belum ada promo</p></div>'}</div></div>`;
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="megaphone"></i> Daftar Promo (${state.db.promos.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openPromoForm()"><i data-lucide="plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${state.db.promos.length ? `<div class="branch-card-inner">${state.db.promos.map((p) => `<div style="display:flex;gap:14px;align-items:center;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;transition:all .25s var(--ease)" onmouseenter="this.style.borderColor='rgba(var(--accent-rgb),.2)';this.style.transform='translateY(-1px)';this.style.boxShadow='var(--sh-sm)'" onmouseleave="this.style.borderColor='var(--border)';this.style.transform='';this.style.boxShadow=''"><div style="width:80px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">${p.image ? `<img src="${esc(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<i data-lucide="image" style="font-size:18px;color:var(--muted)"></i>'}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.description || 'Tanpa deskripsi')}</div></div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span class="badge ${p.active ? 'badge-green' : 'badge-red'}" style="font-size:10px">${p.active ? 'Aktif' : 'Nonaktif'}</span>${ca ? `<button class="btn btn-info btn-sm" onclick="openPromoForm(${p.id})"><i data-lucide="pencil"></i></button><button class="btn btn-danger btn-sm" onclick="delPromo(${p.id})"><i data-lucide="trash-2"></i></button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty-state" style="padding:30px"><i data-lucide="megaphone"></i><p>Belum ada promo</p></div>'}</div></div>`;
 }
 function handlePromoFile(file) {
   if (!file || !file.type.startsWith('image/')) { toast('Pilih file gambar', 'error'); return; }
@@ -2396,7 +2400,7 @@ function renderPromoForm() {
   document.getElementById('dashTitle').textContent = isN ? 'Tambah Promo' : 'Edit Promo';
   const hasImg = p.image || p._pendingBlob;
   const previewSrc = p._pendingBlob ? URL.createObjectURL(p._pendingBlob) : p.image || '';
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='promos';renderSide();renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="form-group"><label class="form-label">Judul Promo</label><input class="form-input" value="${esc(p.title)}" onchange="state.editor.promo.title=this.value" placeholder="Flash Sale, Diskon Akhir Tahun..."></div><div class="form-group"><label class="form-label">Deskripsi</label><textarea class="form-input" rows="2" onchange="state.editor.promo.description=this.value" placeholder="Deskripsi singkat promo...">${esc(p.description || '')}</textarea></div><div class="form-group"><label class="form-label">Gambar Banner</label><div onclick="document.getElementById('promoFileIn').click()" style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg);position:relative;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"><img id="promoImgPreview" src="${esc(previewSrc)}" style="${hasImg ? 'display:block' : 'display:none'};max-width:100%;max-height:200px;border-radius:8px;object-fit:contain"><div id="promoImgHint" style="font-size:13px;color:var(--muted)">${hasImg ? 'Gambar sudah dipotong. Klik ganti untuk mengubah.' : '<i class="fas fa-cloud-upload-alt" style="font-size:24px;display:block;margin-bottom:6px"></i>Klik untuk pilih gambar dari device'}</div></div>${hasImg ? `<button class="btn btn-ghost btn-sm" onclick="removePromoImage()" style="margin-top:8px;color:var(--danger)"><i class="fas fa-trash"></i> Hapus Gambar</button>` : ''}</div><div class="form-group"><label class="form-label">Urutan Tampil</label><input class="form-input" type="number" value="${p.sort_order || 0}" onchange="state.editor.promo.sort_order=parseInt(this.value)||0" style="max-width:120px"></div><div class="status-checks"><label class="status-check"><input type="checkbox" ${p.active ? 'checked' : ''} onchange="state.editor.promo.active=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Tampilkan di Katalog</div><div class="sc-desc">Promo aktif akan muncul sebagai banner di halaman katalog</div></span></label></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='promos';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="savePromo()"><i class="fas fa-save"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='promos';renderSide();renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="form-group"><label class="form-label">Judul Promo</label><input class="form-input" value="${esc(p.title)}" onchange="state.editor.promo.title=this.value" placeholder="Flash Sale, Diskon Akhir Tahun..."></div><div class="form-group"><label class="form-label">Deskripsi</label><textarea class="form-input" rows="2" onchange="state.editor.promo.description=this.value" placeholder="Deskripsi singkat promo...">${esc(p.description || '')}</textarea></div><div class="form-group"><label class="form-label">Gambar Banner</label><div onclick="document.getElementById('promoFileIn').click()" style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg);position:relative;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"><img id="promoImgPreview" src="${esc(previewSrc)}" style="${hasImg ? 'display:block' : 'display:none'};max-width:100%;max-height:200px;border-radius:8px;object-fit:contain"><div id="promoImgHint" style="font-size:13px;color:var(--muted)">${hasImg ? 'Gambar sudah dipotong. Klik ganti untuk mengubah.' : '<i data-lucide="cloud-upload" style="font-size:24px;display:block;margin-bottom:6px"></i>Klik untuk pilih gambar dari device'}</div></div>${hasImg ? `<button class="btn btn-ghost btn-sm" onclick="removePromoImage()" style="margin-top:8px;color:var(--danger)"><i data-lucide="trash-2"></i> Hapus Gambar</button>` : ''}</div><div class="form-group"><label class="form-label">Urutan Tampil</label><input class="form-input" type="number" value="${p.sort_order || 0}" onchange="state.editor.promo.sort_order=parseInt(this.value)||0" style="max-width:120px"></div><div class="status-checks"><label class="status-check"><input type="checkbox" ${p.active ? 'checked' : ''} onchange="state.editor.promo.active=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Tampilkan di Katalog</div><div class="sc-desc">Promo aktif akan muncul sebagai banner di halaman katalog</div></span></label></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='promos';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="savePromo()"><i data-lucide="floppy-disk"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
 }
 async function savePromo() {
   const p = state.editor.promo;
@@ -2579,7 +2583,7 @@ function logAct(action, detail, type) {
 }
 function renderSettingsPanel(el) {
   const pm = state.session.currentUser ? ROLES[state.session.currentUser.role]?.perms || {} : {};
-  if (!pm.settings_edit) { el.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Akses ditolak</p></div>'; return; }
+  if (!pm.settings_edit) { el.innerHTML = '<div class="empty-state"><i data-lucide="lock"></i><p>Akses ditolak</p></div>'; return; }
   const s = state.db.settings || fbSettings();
   const sectionCard = (icon, title, content) => `
     <div class="card" style="margin-bottom: 20px;">
@@ -2623,7 +2627,7 @@ function renderSettingsPanel(el) {
     ${sectionCard('cog', 'Konten', kontenContent)}
     ${sectionCard('search', 'SEO & Analytics', seoContent)}
     <div style="display:flex;justify-content:flex-end;gap:10px">
-      <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Simpan Pengaturan</button>
+      <button class="btn btn-primary" onclick="saveSettings()"><i data-lucide="floppy-disk"></i> Simpan Pengaturan</button>
     </div>
   `;
   const colorInput = document.getElementById('setAccentColor');
@@ -2661,18 +2665,19 @@ async function saveSettings() {
 function renderCategoryList(el) {
   const pm = state.session.currentUser ? ROLES[state.session.currentUser.role]?.perms || {} : {};
   const ca = pm.categories_add, ce = pm.categories_edit, cd = pm.categories_delete;
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-tags"></i> Daftar Kategori (${state.db.categories.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openCategoryForm()"><i class="fas fa-plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="tags"></i> Daftar Kategori (${state.db.categories.length})</h3>${ca ? `<button class="btn btn-primary btn-sm" onclick="openCategoryForm()"><i data-lucide="plus"></i> Tambah</button>` : ''}</div><div style="padding:16px">${
     state.db.categories.length
       ? `<div class="branch-card-inner">${state.db.categories.sort((a, b) => a.sort_order - b.sort_order).map((c) => {
-          return `<div class="branch-card"><div class="branch-card-icon">${getCatIconHtmlManaged(c, '20px')}</div><div class="branch-card-body"><div class="branch-card-name">${esc(c.name)}<span class="badge ${c.active ? 'badge-green' : 'badge-red'}" style="font-size:8px">${c.active ? 'Aktif' : 'Nonaktif'}</span></div><div class="branch-card-addr">Urutan: ${c.sort_order} &middot; Icon: ${c.icon_type || 'Default'}</div></div><div class="branch-card-actions">${ce ? `<button class="btn btn-info btn-sm" onclick="openCategoryForm(${c.id})"><i class="fas fa-pen"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delCategory(${c.id})"><i class="fas fa-trash"></i></button>` : ''}</div></div>`;
+          return `<div class="branch-card"><div class="branch-card-icon">${getCatIconHtmlManaged(c, '20px')}</div><div class="branch-card-body"><div class="branch-card-name">${esc(c.name)}<span class="badge ${c.active ? 'badge-green' : 'badge-red'}" style="font-size:8px">${c.active ? 'Aktif' : 'Nonaktif'}</span></div><div class="branch-card-addr">Urutan: ${c.sort_order} &middot; Icon: ${c.icon_type || 'Default'}</div></div><div class="branch-card-actions">${ce ? `<button class="btn btn-info btn-sm" onclick="openCategoryForm(${c.id})"><i data-lucide="pencil"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delCategory(${c.id})"><i data-lucide="trash-2"></i></button>` : ''}</div></div>`;
         }).join('')}</div>`
-      : '<div class="empty-state" style="padding:30px"><i class="fas fa-tags"></i><p>Belum ada kategori</p></div>'
+      : '<div class="empty-state" style="padding:30px"><i data-lucide="tags"></i><p>Belum ada kategori</p></div>'
   }</div></div>`;
 }
 function getCatIconHtmlManaged(c, s) {
+  if (c.icon_type === 'lucide' && c.icon_value) return `<i data-lucide="${c.icon_value}" style="font-size:${s}"></i>`;
   if (c.icon_type === 'fontawesome' && c.icon_value) return `<i class="${c.icon_value}" style="font-size:${s}"></i>`;
   if (c.icon_type === 'simpleicons' && c.icon_value) return `<img src="https://cdn.simpleicons.org/${c.icon_value}" alt="" style="height:${s};width:auto;object-fit:contain">`;
-  return `<i class="fas fa-tag" style="font-size:${s}"></i>`;
+  return `<i data-lucide="tag" style="font-size:${s}"></i>`;
 }
 function openCategoryForm(id) {
   state.admin.panel = '_catForm';
@@ -2688,16 +2693,16 @@ function renderCategoryForm(el) {
   const c = state.editor.category;
   if (!c) return;
   const isN = !c.id;
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='categories';renderSide();renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px">
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='categories';renderSide();renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px">
     <div class="form-grid-2">
       <div class="form-group"><label class="form-label">Nama Kategori</label><input class="form-input" id="catName" value="${esc(c.name)}" placeholder="Samsung" oninput="autoSlug()"></div>
       <div class="form-group"><label class="form-label">Slug (URL)</label><input class="form-input" id="catSlug" value="${esc(c.slug)}" placeholder="samsung"></div>
       <div class="form-group"><label class="form-label">Urutan</label><input type="number" class="form-input" id="catSort" value="${c.sort_order}" min="0"></div>
-      <div class="form-group"><label class="form-label">Status</label><label class="status-check"><input type="checkbox" id="catActive" ${c.active ? 'checked' : ''}><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Tampil di filter katalog</div></span></label></div>
+      <div class="form-group"><label class="form-label">Status</label><label class="status-check"><input type="checkbox" id="catActive" ${c.active ? 'checked' : ''}><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Tampil di filter katalog</div></span></label></div>
       <div class="form-group" style="grid-column:1/-1"><label class="form-label">Tipe Icon</label><select class="form-input" id="catIconType" onchange="document.getElementById('catIconValue').value=''"><option value="" ${!c.icon_type ? 'selected' : ''}>Tanpa Icon (Default)</option><option value="fontawesome" ${c.icon_type === 'fontawesome' ? 'selected' : ''}>Font Awesome</option><option value="simpleicons" ${c.icon_type === 'simpleicons' ? 'selected' : ''}>Simple Icons (Brand Logo)</option></select></div>
-      <div class="form-group" style="grid-column:1/-1" id="catIconValueWrap"><label class="form-label">Value Icon</label><input class="form-input" id="catIconValue" value="${esc(c.icon_value)}" placeholder="${c.icon_type === 'fontawesome' ? 'fas fa-mobile-alt' : c.icon_type === 'simpleicons' ? 'samsung' : 'Kosongkan jika tanpa icon'}"></div>
+      <div class="form-group" style="grid-column:1/-1" id="catIconValueWrap"><label class="form-label">Value Icon</label><input class="form-input" id="catIconValue" value="${esc(c.icon_value)}" placeholder="${c.icon_type === 'lucide' ? 'smartphone' : c.icon_type === 'fontawesome' ? 'fas fa-mobile-alt' : c.icon_type === 'simpleicons' ? 'samsung' : 'Kosongkan jika tanpa icon'}"></div>
     </div>
-    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='categories';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveCategory()"><i class="fas fa-save"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='categories';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveCategory()"><i data-lucide="floppy-disk"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div>
   </div></div>`;
 }
 function autoSlug() {
@@ -2767,30 +2772,30 @@ function renderSide() {
   const low = state.db.products.filter((p) => !p.archived && p.stock <= 5).length;
   let h = '<div class="nav-label">Menu Utama</div>';
   if (pm.dashboard)
-    h += `<div class="nav-item ${state.admin.panel === 'dashboard' ? 'active' : ''}" onclick="state.admin.panel='dashboard';renderSide();renderDash();closeSidebar()"><i class="fas fa-chart-pie"></i> Dashboard</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'dashboard' ? 'active' : ''}" onclick="state.admin.panel='dashboard';renderSide();renderDash();closeSidebar()"><i data-lucide="pie-chart"></i> Dashboard</div>`;
   if (pm.products_view)
-    h += `<div class="nav-item ${state.admin.panel === 'products' ? 'active' : ''}" onclick="state.admin.panel='products';renderSide();renderDash();closeSidebar()"><i class="fas fa-box"></i> Produk${low ? `<span class="nav-badge">${low}</span>` : ''}</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'products' ? 'active' : ''}" onclick="state.admin.panel='products';renderSide();renderDash();closeSidebar()"><i data-lucide="box"></i> Produk${low ? `<span class="nav-badge">${low}</span>` : ''}</div>`;
   if (pm.users_view)
-    h += `<div class="nav-item ${state.admin.panel === 'users' ? 'active' : ''}" onclick="state.admin.panel='users';renderSide();renderDash();closeSidebar()"><i class="fas fa-users"></i> Pengguna</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'users' ? 'active' : ''}" onclick="state.admin.panel='users';renderSide();renderDash();closeSidebar()"><i data-lucide="users"></i> Pengguna</div>`;
   if (pm.branches_view)
-    h += `<div class="nav-item ${state.admin.panel === 'branches' ? 'active' : ''}" onclick="state.admin.panel='branches';renderSide();renderDash();closeSidebar()"><i class="fas fa-store-alt"></i> Cabang</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'branches' ? 'active' : ''}" onclick="state.admin.panel='branches';renderSide();renderDash();closeSidebar()"><i data-lucide="store"></i> Cabang</div>`;
   if (pm.categories_view)
-    h += `<div class="nav-item ${state.admin.panel === 'categories' ? 'active' : ''}" onclick="state.admin.panel='categories';renderSide();renderDash();closeSidebar()"><i class="fas fa-tags"></i> Kategori</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'categories' ? 'active' : ''}" onclick="state.admin.panel='categories';renderSide();renderDash();closeSidebar()"><i data-lucide="tags"></i> Kategori</div>`;
   h += '<div class="nav-label">Konten</div>';
   if (pm.social_edit)
-    h += `<div class="nav-item ${state.admin.panel === 'social' ? 'active' : ''}" onclick="state.admin.panel='social';renderSide();renderDash();closeSidebar()"><i class="fas fa-share-alt"></i> Sosial Media</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'social' ? 'active' : ''}" onclick="state.admin.panel='social';renderSide();renderDash();closeSidebar()"><i data-lucide="share-2"></i> Sosial Media</div>`;
   if (pm.promos_manage)
-    h += `<div class="nav-item ${state.admin.panel === 'promos' ? 'active' : ''}" onclick="state.admin.panel='promos';renderSide();renderDash();closeSidebar()"><i class="fas fa-bullhorn"></i> Promo</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'promos' ? 'active' : ''}" onclick="state.admin.panel='promos';renderSide();renderDash();closeSidebar()"><i data-lucide="megaphone"></i> Promo</div>`;
   if (pm.reviews_manage) {
     const pendingRev = state.db.reviews.filter(r => r.hidden).length;
-    h += `<div class="nav-item ${state.admin.panel === 'reviews' ? 'active' : ''}" onclick="state.admin.panel='reviews';state.admin.reviewFilterStatus='all';state.admin.reviewFilterRating=0;state.admin.reviewSelected=[];state.admin.reviewPage=1;renderSide();renderDash();closeSidebar()"><i class="fas fa-comments"></i> Ulasan${pendingRev ? `<span class="nav-badge">${pendingRev}</span>` : ''}</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'reviews' ? 'active' : ''}" onclick="state.admin.panel='reviews';state.admin.reviewFilterStatus='all';state.admin.reviewFilterRating=0;state.admin.reviewSelected=[];state.admin.reviewPage=1;renderSide();renderDash();closeSidebar()"><i data-lucide="messages-square"></i> Ulasan${pendingRev ? `<span class="nav-badge">${pendingRev}</span>` : ''}</div>`;
   }
   h += '<div class="nav-label">Sistem</div>';
   if (pm.settings_edit)
-    h += `<div class="nav-item ${state.admin.panel === 'settings' ? 'active' : ''}" onclick="state.admin.panel='settings';renderSide();renderDash();closeSidebar()"><i class="fas fa-cog"></i> Pengaturan</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'settings' ? 'active' : ''}" onclick="state.admin.panel='settings';renderSide();renderDash();closeSidebar()"><i data-lucide="settings"></i> Pengaturan</div>`;
   if (pm.roles_edit)
-    h += `<div class="nav-item ${state.admin.panel === 'roles' ? 'active' : ''}" onclick="state.admin.panel='roles';renderSide();renderDash();closeSidebar()"><i class="fas fa-shield-alt"></i> Peran</div>`;
-  h += `<div class="nav-item ${state.admin.panel === 'activity' ? 'active' : ''}" onclick="state.admin.panel='activity';renderSide();renderDash();closeSidebar()"><i class="fas fa-history"></i> Aktivitas</div>`;
+    h += `<div class="nav-item ${state.admin.panel === 'roles' ? 'active' : ''}" onclick="state.admin.panel='roles';renderSide();renderDash();closeSidebar()"><i data-lucide="shield-check"></i> Peran</div>`;
+  h += `<div class="nav-item ${state.admin.panel === 'activity' ? 'active' : ''}" onclick="state.admin.panel='activity';renderSide();renderDash();closeSidebar()"><i data-lucide="history"></i> Aktivitas</div>`;
   n.innerHTML = h;
   f.innerHTML = '';
   renderMobBottomNav();
@@ -2880,7 +2885,7 @@ function renderHome(el) {
     lowHtml = `<div class="low-stock-list">${low.map((p) => `<div class="low-stock-item"><img class="low-stock-img" src="${(p.images || [])[0] || 'https://picsum.photos/seed/def/80/80'}" alt="" loading="lazy"><div class="low-stock-info"><div class="low-stock-name">${esc(p.name)}</div><div class="low-stock-brand">${esc(p.brand)}</div></div><span class="low-stock-badge ${p.stock === 0 ? 'habis' : 'rendah'}">${p.stock === 0 ? 'Habis' : 'Stok ' + p.stock}</span></div>`).join('')}</div>`;
   } else {
     lowHtml =
-      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i class="fas fa-check-circle" style="color:#22c55e;margin-right:6px"></i>Semua stok aman</div>';
+      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px"><i data-lucide="circle-check" style="color:#22c55e;margin-right:6px"></i>Semua stok aman</div>';
   }
   let recentHtml = '';
   const recent = state.admin.activityLog.slice(0, 6);
@@ -2958,17 +2963,17 @@ function renderHome(el) {
       <span class="greeting-time">${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
     </div>
     <div class="stats-grid">
-      <div class="stat-card stat-card--gold"><div class="stat-icon"><i class="fas fa-box"></i></div><div class="stat-label">Total Produk</div><div class="stat-value">${ac.length}</div></div>
-      <div class="stat-card stat-card--teal"><div class="stat-icon"><i class="fas fa-store-alt"></i></div><div class="stat-label">Cabang Aktif</div><div class="stat-value">${branchCount}</div></div>
-      <div class="stat-card stat-card--amber"><div class="stat-icon"><i class="fas fa-comments"></i></div><div class="stat-label">Ulasan</div><div class="stat-value">${reviewsCount}</div></div>
-      <div class="stat-card stat-card--rose"><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="stat-label">Stok Rendah</div><div class="stat-value" style="${lowCount ? 'color:#D25050' : ''}">${lowCount}</div></div>
+      <div class="stat-card stat-card--gold"><div class="stat-icon"><i data-lucide="box"></i></div><div class="stat-label">Total Produk</div><div class="stat-value">${ac.length}</div></div>
+      <div class="stat-card stat-card--teal"><div class="stat-icon"><i data-lucide="store"></i></div><div class="stat-label">Cabang Aktif</div><div class="stat-value">${branchCount}</div></div>
+      <div class="stat-card stat-card--amber"><div class="stat-icon"><i data-lucide="messages-square"></i></div><div class="stat-label">Ulasan</div><div class="stat-value">${reviewsCount}</div></div>
+      <div class="stat-card stat-card--rose"><div class="stat-icon"><i data-lucide="triangle-alert"></i></div><div class="stat-label">Stok Rendah</div><div class="stat-value" style="${lowCount ? 'color:#D25050' : ''}">${lowCount}</div></div>
     </div>
     ${qa.length ? `<div class="quick-actions">${quickHtml}</div>` : ''}
     <div class="dash-grid-2col" style="margin-top:20px">
-      <div class="card card--rose"><div class="card-head"><h3><i class="fas fa-exclamation-circle"></i> Stok Rendah (${lowCount})</h3></div><div style="padding:14px 16px">${lowHtml}</div></div>
-      <div class="card card--indigo"><div class="card-head"><h3><i class="fas fa-history"></i> Aktivitas Terakhir</h3></div><div class="dash-recent" style="padding:4px 16px 8px">${recentHtml}</div></div>
+      <div class="card card--rose"><div class="card-head"><h3><i data-lucide="circle-alert"></i> Stok Rendah (${lowCount})</h3></div><div style="padding:14px 16px">${lowHtml}</div></div>
+      <div class="card card--indigo"><div class="card-head"><h3><i data-lucide="history"></i> Aktivitas Terakhir</h3></div><div class="dash-recent" style="padding:4px 16px 8px">${recentHtml}</div></div>
     </div>
-    <div style="margin-top:20px"><div class="card card--gold"><div class="card-head"><h3><i class="fas fa-chart-pie"></i> Distribusi Kategori</h3></div><div style="padding:20px;display:flex;align-items:center;justify-content:center">${renderCatChartContents()}</div></div></div>
+    <div style="margin-top:20px"><div class="card card--gold"><div class="card-head"><h3><i data-lucide="pie-chart"></i> Distribusi Kategori</h3></div><div style="padding:20px;display:flex;align-items:center;justify-content:center">${renderCatChartContents()}</div></div></div>
   `;
   updateGreetingTime();
 }
@@ -3074,12 +3079,12 @@ function renderProdList(el) {
   const pi = list.slice((state.admin.productPage - 1) * PP, state.admin.productPage * PP);
   const si = (f) =>
     state.admin.sortField === f
-      ? `<i class="fas fa-caret-${state.admin.sortDir === 'asc' ? 'up' : 'down'}" style="margin-left:3px;color:var(--accent)"></i>`
-      : `<i class="fas fa-sort" style="margin-left:3px;opacity:.3"></i>`;
+      ? `<i data-lucide="chevron-${state.admin.sortDir === 'asc' ? 'up' : 'down'}" style="margin-left:3px;color:var(--accent);width:12px;height:12px"></i>`
+      : `<i data-lucide="arrow-up-down" style="margin-left:3px;opacity:.3"></i>`;
   const catOpts = ['Semua', ...CATS]
     .map((c) => `<option value="${c}"${state.catalog.dashCatFilter === c ? ' selected' : ''}>${c}</option>`)
     .join('');
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-box"></i> Daftar Produk (${state.db.products.length})</h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${ca ? `<button class="btn btn-primary btn-sm" onclick="openProdForm()"><i class="fas fa-plus"></i> Tambah</button>` : ''}<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:6px 12px;max-width:280px;min-width:200px"><i class="fas fa-search" style="color:var(--accent)"></i><input type="text" placeholder="Cari nama, kategori, spesifikasi..." id="dashSearch" oninput="renderDash()" value="${esc(document.getElementById('dashSearch')?.value || '')}" style="background:none;border:none;outline:none;width:100%;font-size:13px;color:var(--fg);font-weight:600;"></div><select class="filter-select" style="min-width:130px" onchange="state.catalog.dashCatFilter=this.value;state.admin.productPage=1;renderDash()">${catOpts}</select></div></div>${!state.db.products.length ? '<div class="empty-state"><i class="fas fa-box-open"></i><p>Belum ada produk</p><div class="empty-state-cta" onclick="openProdForm()"><i class="fas fa-plus"></i> Tambah Produk Pertama</div></div>' : `<div class="table-wrap"><table><thead><tr><th style="cursor:pointer" onclick="state.admin.sortField='name';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Produk ${si('name')}</th><th>Kategori</th><th style="cursor:pointer" onclick="state.admin.sortField='price';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Harga ${si('price')}</th><th style="cursor:pointer" onclick="state.admin.sortField='stock';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Stok ${si('stock')}</th><th>Terjual</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${pi.map((p) => `<tr><td><div class="prod-cell"><img class="prod-thumb" src="${(p.images || [])[0] || 'https://picsum.photos/seed/def/80/80'}" alt="" loading="lazy"><div><div class="prod-name">${esc(p.name)}</div><div class="prod-brand">${esc(p.brand)}</div></div></div></td><td><span class="badge ${getCatBadgeClass(p.category)}">${esc(p.category)}</span></td><td>${(() => { const d = getDiscount(p); return d ? `<span class="tbl-disc"><span class="tbl-disc-badge"><i class="fas fa-tag"></i> ${d.percent}%</span><span class="tbl-disc-orig">${fmt(d.originalPrice)}</span><br><strong style="color:var(--danger)">${fmt(d.discountedPrice)}</strong></span>` : `<strong>${fmt(p.price)}</strong>`; })()}</td><td>${p.stock <= 5 ? `<span style="color:${p.stock === 0 ? 'var(--danger)' : 'var(--warning)'};font-weight:600">${p.stock}</span>` : p.stock}</td><td>${p.sold || 0}</td><td>${p.archived ? '<span class="badge badge-red">Arsip</span>' : p.featured ? '<span class="badge badge-gold">Unggulan</span>' : '<span class="badge badge-green">Aktif</span>'}</td><td><div class="action-btns"><button class="btn btn-ghost btn-sm" onclick="viewProd(${p.id})"><i class="fas fa-eye"></i></button>${ce ? `<button class="btn btn-info btn-sm" onclick="openProdForm(${p.id})"><i class="fas fa-pen"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delProd(${p.id})"><i class="fas fa-trash"></i></button>` : ''}</div></td></tr>`).join('')}</tbody></table></div><div class="pagination">${pag(state.admin.productPage, tp, 'state.admin.productPage')}</div>`}</div>`;
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="box"></i> Daftar Produk (${state.db.products.length})</h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${ca ? `<button class="btn btn-primary btn-sm" onclick="openProdForm()"><i data-lucide="plus"></i> Tambah</button>` : ''}<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:6px 12px;max-width:280px;min-width:200px"><i data-lucide="search" style="color:var(--accent)"></i><input type="text" placeholder="Cari nama, kategori, spesifikasi..." id="dashSearch" oninput="renderDash()" value="${esc(document.getElementById('dashSearch')?.value || '')}" style="background:none;border:none;outline:none;width:100%;font-size:13px;color:var(--fg);font-weight:600;"></div><select class="filter-select" style="min-width:130px" onchange="state.catalog.dashCatFilter=this.value;state.admin.productPage=1;renderDash()">${catOpts}</select></div></div>${!state.db.products.length ? '<div class="empty-state"><i data-lucide="package-open"></i><p>Belum ada produk</p><div class="empty-state-cta" onclick="openProdForm()"><i data-lucide="plus"></i> Tambah Produk Pertama</div></div>' : `<div class="table-wrap"><table><thead><tr><th style="cursor:pointer" onclick="state.admin.sortField='name';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Produk ${si('name')}</th><th>Kategori</th><th style="cursor:pointer" onclick="state.admin.sortField='price';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Harga ${si('price')}</th><th style="cursor:pointer" onclick="state.admin.sortField='stock';state.admin.sortDir=state.admin.sortDir==='asc'?'desc':'asc';renderDash()">Stok ${si('stock')}</th><th>Terjual</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${pi.map((p) => `<tr><td><div class="prod-cell"><img class="prod-thumb" src="${(p.images || [])[0] || 'https://picsum.photos/seed/def/80/80'}" alt="" loading="lazy"><div><div class="prod-name">${esc(p.name)}</div><div class="prod-brand">${esc(p.brand)}</div></div></div></td><td><span class="badge ${getCatBadgeClass(p.category)}">${esc(p.category)}</span></td><td>${(() => { const d = getDiscount(p); return d ? `<span class="tbl-disc"><span class="tbl-disc-badge"><i data-lucide="tag"></i> ${d.percent}%</span><span class="tbl-disc-orig">${fmt(d.originalPrice)}</span><br><strong style="color:var(--danger)">${fmt(d.discountedPrice)}</strong></span>` : `<strong>${fmt(p.price)}</strong>`; })()}</td><td>${p.stock <= 5 ? `<span style="color:${p.stock === 0 ? 'var(--danger)' : 'var(--warning)'};font-weight:600">${p.stock}</span>` : p.stock}</td><td>${p.sold || 0}</td><td>${p.archived ? '<span class="badge badge-red">Arsip</span>' : p.featured ? '<span class="badge badge-gold">Unggulan</span>' : '<span class="badge badge-green">Aktif</span>'}</td><td><div class="action-btns"><button class="btn btn-ghost btn-sm" onclick="viewProd(${p.id})"><i data-lucide="eye"></i></button>${ce ? `<button class="btn btn-info btn-sm" onclick="openProdForm(${p.id})"><i data-lucide="pencil"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delProd(${p.id})"><i data-lucide="trash-2"></i></button>` : ''}</div></td></tr>`).join('')}</tbody></table></div><div class="pagination">${pag(state.admin.productPage, tp, 'state.admin.productPage')}</div>`}</div>`;
   const newInput = document.getElementById('dashSearch');
   if (newInput && window.innerWidth > 768) { newInput.focus(); if (searchCursor !== null) newInput.setSelectionRange(searchCursor, searchCursor); }
 }
@@ -3087,7 +3092,7 @@ function renderActivityLog(el) {
   const recent = state.admin.activityLog.slice(0, 10);
   if (!recent.length) {
     el.innerHTML =
-      '<div class="empty-state" style="padding:30px"><i class="fas fa-history"></i><p>Belum ada aktivitas tercatat</p><p style="font-size:11px;margin-top:4px">Aktivitas akan muncul saat ada perubahan data</p></div>';
+      '<div class="empty-state" style="padding:30px"><i data-lucide="history"></i><p>Belum ada aktivitas tercatat</p><p style="font-size:11px;margin-top:4px">Aktivitas akan muncul saat ada perubahan data</p></div>';
     return;
   }
   el.innerHTML = `<div class="act-log">${recent
@@ -3127,7 +3132,7 @@ function renderUserList(el) {
   const tp = Math.max(1, Math.ceil(state.db.users.length / UP));
   if (state.admin.userPage > tp) state.admin.userPage = tp;
   const pi = state.db.users.slice((state.admin.userPage - 1) * UP, state.admin.userPage * UP);
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-users"></i> Daftar Pengguna (${state.db.users.length})</h3><div>${cu ? `<button class="btn btn-primary btn-sm" onclick="openUserForm()"><i class="fas fa-plus"></i> Tambah</button>` : ''}</div></div><div class="table-wrap"><table><thead><tr><th>Username</th><th>Nama Tampilan</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${pi
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="users"></i> Daftar Pengguna (${state.db.users.length})</h3><div>${cu ? `<button class="btn btn-primary btn-sm" onclick="openUserForm()"><i data-lucide="plus"></i> Tambah</button>` : ''}</div></div><div class="table-wrap"><table><thead><tr><th>Username</th><th>Nama Tampilan</th><th>Peran</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${pi
     .map(
       (u) =>
         `<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:30px;height:30px;font-size:10px;border-radius:8px">${(
@@ -3140,7 +3145,7 @@ function renderUserList(el) {
           .slice(
             0,
             2
-          )}</div><strong>${esc(u.username)}</strong></div></td><td>${esc(u.display_name || u.username)}</td><td><span class="badge ${u.role === 'admin' ? 'badge-red' : u.role === 'editor' ? 'badge-blue' : 'badge-green'}">${esc(ROLES[u.role]?.label || u.role)}</span></td><td>${u.active ? '<span class="badge badge-green">Aktif</span>' : '<span class="badge badge-red">Nonaktif</span>'}</td><td><div class="action-btns">${ce ? `<button class="btn btn-info btn-sm" onclick="openUserForm(${u.id})"><i class="fas fa-pen"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delUser(${u.id})"><i class="fas fa-trash"></i></button>` : ''}</div></td></tr>`
+          )}</div><strong>${esc(u.username)}</strong></div></td><td>${esc(u.display_name || u.username)}</td><td><span class="badge ${u.role === 'admin' ? 'badge-red' : u.role === 'editor' ? 'badge-blue' : 'badge-green'}">${esc(ROLES[u.role]?.label || u.role)}</span></td><td>${u.active ? '<span class="badge badge-green">Aktif</span>' : '<span class="badge badge-red">Nonaktif</span>'}</td><td><div class="action-btns">${ce ? `<button class="btn btn-info btn-sm" onclick="openUserForm(${u.id})"><i data-lucide="pencil"></i></button>` : ''}${cd ? `<button class="btn btn-danger btn-sm" onclick="delUser(${u.id})"><i data-lucide="trash-2"></i></button>` : ''}</div></td></tr>`
     )
     .join(
       ''
@@ -3158,7 +3163,7 @@ function renderRoles(el) {
   const shortLabel = (pk) => { const map = { dashboard:'Lihat', products_view:'Lihat', products_add:'Tambah', products_edit:'Edit', products_delete:'Hapus', users_view:'Lihat', users_add:'Tambah', users_edit:'Edit', users_delete:'Hapus', branches_view:'Lihat', branches_add:'Tambah', branches_edit:'Edit', branches_delete:'Hapus', categories_view:'Lihat', categories_add:'Tambah', categories_edit:'Edit', categories_delete:'Hapus', social_edit:'Sosmed', roles_edit:'Peran', reviews_manage:'Ulasan', promos_manage:'Promo', settings_edit:'Setting' }; return map[pk] || pk; };
   const roleBadge = { admin: 'badge-red', editor: 'badge-blue', viewer: 'badge-green' };
   const editing = state.admin.editRole;
-  el.innerHTML = `<div class="card"><div class="card-head"><h3><i class="fas fa-shield-alt"></i> Kelola Peran</h3></div><div style="padding:16px">${Object.entries(ROLES).map(([k, r]) => {
+  el.innerHTML = `<div class="card"><div class="card-head"><h3><i data-lucide="shield-check"></i> Kelola Peran</h3></div><div style="padding:16px">${Object.entries(ROLES).map(([k, r]) => {
     const isEditing = editing === k;
     return `<div class="role-card${isEditing ? ' editing' : ''}">
       <div class="role-card-head">
@@ -3172,7 +3177,7 @@ function renderRoles(el) {
 function togglePerm(role, perm) { ROLES[role].perms[perm] = !ROLES[role].perms[perm]; renderDash(); }
 function pag(cur, tot, vn) {
   if (tot <= 1) return '';
-  let h = `<button class="page-btn" onclick="${vn}=Math.max(1,${vn}-1);renderDash()" ${cur === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+  let h = `<button class="page-btn" onclick="${vn}=Math.max(1,${vn}-1);renderDash()" ${cur === 1 ? 'disabled' : ''}><i data-lucide="chevron-left"></i></button>`;
   for (let i = 1; i <= tot; i++) {
     if (tot > 7 && i > 2 && i < tot - 1 && Math.abs(i - cur) > 1) {
       if (i === 3 || i === tot - 2)
@@ -3181,7 +3186,7 @@ function pag(cur, tot, vn) {
     }
     h += `<button class="page-btn ${i === cur ? 'active' : ''}" onclick="${vn}=${i};renderDash()">${i}</button>`;
   }
-  h += `<button class="page-btn" onclick="${vn}=Math.min(${tot},${vn}+1);renderDash()" ${cur === tot ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+  h += `<button class="page-btn" onclick="${vn}=Math.min(${tot},${vn}+1);renderDash()" ${cur === tot ? 'disabled' : ''}><i data-lucide="chevron-right"></i></button>`;
   return h;
 }
 function switchToGrouped() {
@@ -3227,7 +3232,7 @@ function renderProdForm() {
   const sp = (p.specs || [])
     .map(
       (s, i) =>
-        `<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="form-input" value="${esc(s)}" oninput="setEditField('specs_idx',${i});setEditField('specs_val',this.value)" style="flex:1"><button class="btn btn-danger btn-sm" onclick="state.editor.product.specs.splice(${i},1);renderProdForm()"><i class="fas fa-times"></i></button></div>`
+        `<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="form-input" value="${esc(s)}" oninput="setEditField('specs_idx',${i});setEditField('specs_val',this.value)" style="flex:1"><button class="btn btn-danger btn-sm" onclick="state.editor.product.specs.splice(${i},1);renderProdForm()"><i data-lucide="x"></i></button></div>`
     )
     .join('');
   const isGrouped = hasGroupedVar(p);
@@ -3235,13 +3240,13 @@ function renderProdForm() {
     .filter((v) => v.name)
     .map(
       (v, i) =>
-        `<div class="var-item"><span class="var-name">${esc(v.name)}</span><span class="var-diff">${v.diff ? (v.diff > 0 ? '+' : '') + fmt(v.diff) : ''}</span><button class="var-remove" onclick="state.editor.product.variants.splice(${i},1);renderProdForm()"><i class="fas fa-times"></i></button></div>`
+        `<div class="var-item"><span class="var-name">${esc(v.name)}</span><span class="var-diff">${v.diff ? (v.diff > 0 ? '+' : '') + fmt(v.diff) : ''}</span><button class="var-remove" onclick="state.editor.product.variants.splice(${i},1);renderProdForm()"><i data-lucide="x"></i></button></div>`
     )
     .join('');
   const groupsHtml = (p.variant_groups || [])
     .map(
       (g, gi) =>
-        `<div class="vg-group-card"><div class="vg-group-head"><div style="display:flex;align-items:center;gap:8px;flex:1"><i class="fas fa-layer-group" style="color:var(--accent);font-size:13px"></i><input class="form-input vg-group-name" value="${esc(g.name)}" onchange="state.editor.product.variant_groups[${gi}].name=this.value;renderProdForm()" placeholder="Nama grup (mis: Warna)"></div><button class="btn btn-danger btn-sm" onclick="state.editor.product.variant_groups.splice(${gi},1);regenVariants();renderProdForm()" style="min-width:30px" title="Hapus grup"><i class="fas fa-trash"></i></button></div>${g.options.map((o, oi) => `<div class="vg-option-row"><input class="form-input vg-option-input" value="${esc(o)}" onchange="state.editor.product.variant_groups[${gi}].options[${oi}]=this.value" placeholder="Nama opsi"><button class="btn btn-danger btn-sm vg-option-del" onclick="state.editor.product.variant_groups[${gi}].options.splice(${oi},1);regenVariants();renderProdForm()" title="Hapus opsi"${g.options.length <= 1 ? ' disabled' : ''}><i class="fas fa-times"></i></button></div>`).join('')}<button class="btn btn-ghost btn-sm vg-add-opt" onclick="state.editor.product.variant_groups[${gi}].options.push('Opsi baru');regenVariants();renderProdForm()"><i class="fas fa-plus"></i> Tambah Opsi</button></div>`
+        `<div class="vg-group-card"><div class="vg-group-head"><div style="display:flex;align-items:center;gap:8px;flex:1"><i data-lucide="layers" style="color:var(--accent);font-size:13px"></i><input class="form-input vg-group-name" value="${esc(g.name)}" onchange="state.editor.product.variant_groups[${gi}].name=this.value;renderProdForm()" placeholder="Nama grup (mis: Warna)"></div><button class="btn btn-danger btn-sm" onclick="state.editor.product.variant_groups.splice(${gi},1);regenVariants();renderProdForm()" style="min-width:30px" title="Hapus grup"><i data-lucide="trash-2"></i></button></div>${g.options.map((o, oi) => `<div class="vg-option-row"><input class="form-input vg-option-input" value="${esc(o)}" onchange="state.editor.product.variant_groups[${gi}].options[${oi}]=this.value" placeholder="Nama opsi"><button class="btn btn-danger btn-sm vg-option-del" onclick="state.editor.product.variant_groups[${gi}].options.splice(${oi},1);regenVariants();renderProdForm()" title="Hapus opsi"${g.options.length <= 1 ? ' disabled' : ''}><i data-lucide="x"></i></button></div>`).join('')}<button class="btn btn-ghost btn-sm vg-add-opt" onclick="state.editor.product.variant_groups[${gi}].options.push('Opsi baru');regenVariants();renderProdForm()"><i data-lucide="plus"></i> Tambah Opsi</button></div>`
     )
     .join('');
   const combosHtml = isGrouped
@@ -3256,10 +3261,10 @@ function renderProdForm() {
   const gi = (p.images || [])
     .map(
       (im, i) =>
-        `<div class="gallery-item ${i === 0 ? 'main' : ''}"><img src="${esc(im)}" alt=""><div class="gi-badge">${i === 0 ? 'Utama' : ''}</div><div class="gi-actions">${i !== 0 ? `<button class="gi-btn" onclick="const t=state.editor.product.images[0];state.editor.product.images[0]=state.editor.product.images[${i}];state.editor.product.images[${i}]=t;renderProdForm()" title="Jadikan utama"><i class="fas fa-star"></i></button>` : ''}<button class="gi-btn" onclick="state.editor.product.images.splice(${i},1);renderProdForm()" title="Hapus"><i class="fas fa-trash"></i></button></div></div>`
+        `<div class="gallery-item ${i === 0 ? 'main' : ''}"><img src="${esc(im)}" alt=""><div class="gi-badge">${i === 0 ? 'Utama' : ''}</div><div class="gi-actions">${i !== 0 ? `<button class="gi-btn" onclick="const t=state.editor.product.images[0];state.editor.product.images[0]=state.editor.product.images[${i}];state.editor.product.images[${i}]=t;renderProdForm()" title="Jadikan utama"><i data-lucide="star"></i></button>` : ''}<button class="gi-btn" onclick="state.editor.product.images.splice(${i},1);renderProdForm()" title="Hapus"><i data-lucide="trash-2"></i></button></div></div>`
     )
     .join('');
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='products';renderSide();renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="edit-tabs"><button class="edit-tab ${state.editor.tab === 'info' ? 'active' : ''}" onclick="state.editor.tab='info';renderProdForm()"><i class="fas fa-info-circle"></i> Info</button><button class="edit-tab ${state.editor.tab === 'gallery' ? 'active' : ''}" onclick="state.editor.tab='gallery';renderProdForm()"><i class="fas fa-images"></i> Gallery</button><button class="edit-tab ${state.editor.tab === 'variants' ? 'active' : ''}" onclick="state.editor.tab='variants';renderProdForm()"><i class="fas fa-sliders-h"></i> Varian</button><button class="edit-tab ${state.editor.tab === 'status' ? 'active' : ''}" onclick="state.editor.tab='status';renderProdForm()"><i class="fas fa-toggle-on"></i> Status</button></div><div class="etab ${state.editor.tab === 'info' ? 'active' : ''}"><div class="form-grid-2"><div class="form-group"><label class="form-label">Kategori</label><select class="form-input" onchange="setEditField('category',this.value)">${CATS.map((c) => `<option value="${c}"${p.category === c ? ' selected' : ''}>${c}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">Merek</label><input class="form-input" value="${esc(p.brand)}" onchange="setEditField('brand',this.value)" placeholder="Contoh: ASUS"></div><div class="form-group" style="grid-column:1/-1"><label class="form-label">Nama Produk</label><input class="form-input" value="${esc(p.name)}" onchange="setEditField('name',this.value)" placeholder="Contoh: ROG Strix G16"></div><div class="form-group"><label class="form-label">Harga Dasar (Rp)</label><input class="form-input" type="number" value="${p.price || 0}" onchange="setEditNum('price',this.value)"></div><div class="form-group"><label class="form-label">Stok</label><input class="form-input" type="number" value="${p.stock || 0}" onchange="setEditNum('stock',this.value)"></div><div class="form-group" style="grid-column:1/-1"><label class="form-label" style="display:flex;align-items:center;gap:6px"><i class="fas fa-tag" style="color:var(--danger);font-size:11px"></i> Diskon <span style="font-size:9px;color:var(--muted);font-weight:400">(opsional, isi salah satu)</span></label><div style="display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Harga Diskon (Rp)</div><input class="form-input" type="number" value="${p.discount_price || ''}" placeholder="Kosongkan jika tidak diskon" onchange="state.editor.product.discount_price=parseInt(this.value)||null;if(this.value)state.editor.product.discount_percent=null;renderProdForm()"></div><div style="font-size:18px;color:var(--muted);padding-top:14px">atau</div><div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Persentase Diskon (%)</div><input class="form-input" type="number" value="${p.discount_percent || ''}" placeholder="Contoh: 20" min="1" max="99" onchange="state.editor.product.discount_percent=parseInt(this.value)||null;if(this.value)state.editor.product.discount_price=null;renderProdForm()"></div></div></div><div class="form-group" style="grid-column:1/-1"><label class="form-label">Deskripsi</label><textarea class="form-input" rows="3" onchange="setEditField('description',this.value)" placeholder="Deskripsi singkat produk...">${esc(p.description || '')}</textarea></div></div><div style="margin-top:12px"><label class="form-label">Spesifikasi</label>${sp || '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Belum ada spesifikasi</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.product.specs.push('');renderProdForm()"><i class="fas fa-plus"></i> Tambah Spesifikasi</button></div></div><div class="etab ${state.editor.tab === 'gallery' ? 'active' : ''}"><div class="gallery-grid">${gi || ''}</div><div class="upload-area" id="upArea" onclick="document.getElementById('permFileIn').click()"><i class="fas fa-cloud-upload-alt"></i><p>Klik atau seret gambar ke sini</p><div class="upload-hint" id="upHint">Klik atau seret gambar ke sini (maks 5MB per gambar, bisa pilih banyak)</div><div class="upload-progress" id="upProg"></div></div></div><div class="etab ${state.editor.tab === 'variants' ? 'active' : ''}"><div style="display:flex;gap:8px;margin-bottom:16px"><button class="btn btn-ghost btn-sm ${!isGrouped ? 'active' : ''}" style="${!isGrouped ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}" onclick="state.editor.product.variant_groups=[];if(state.editor.product.variants.length&&!state.editor.product.variants[0].g)state.editor.product.variants=state.editor.product.variants.map(v=>({name:v.name,diff:v.diff||0,stock:0}));renderProdForm()"><i class="fas fa-list"></i> Varian Biasa</button><button class="btn btn-ghost btn-sm ${isGrouped ? 'active' : ''}" style="${isGrouped ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}" onclick="switchToGrouped()"><i class="fas fa-layer-group"></i> Varian Group</button></div>${isGrouped ? `<div class="form-group"><label class="form-label">Grup Varian</label>${groupsHtml || '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Belum ada grup</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.product.variant_groups.push({name:'Grup '+(state.editor.product.variant_groups.length+1),options:['Opsi 1','Opsi 2']});regenVariants();renderProdForm()"><i class="fas fa-plus"></i> Tambah Grup</button></div>${state.editor.product.variant_groups.length ? `<div class="form-group"><label class="form-label">Kombinasi & Harga</label><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Atur selisih harga (dari harga dasar) dan stok untuk setiap kombinasi.</div><div class="var-list">${combosHtml || '<div class="empty-state" style="padding:16px"><i class="fas fa-sliders-h"></i><p>Tambahkan grup dan opsi di atas</p></div>'}</div></div>` : ''}` : `<div class="form-group"><label class="form-label">Tambah Varian</label><div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><input class="form-input" id="varNameIn" placeholder="Nama (mis: RAM 16GB)"></div><div style="width:140px"><input class="form-input" type="number" id="varDiffIn" placeholder="Selisih harga"></div><button class="btn btn-primary btn-sm" onclick="const n=document.getElementById('varNameIn'),d=document.getElementById('varDiffIn');if(n.value.trim()){if(!state.editor.product.variants)state.editor.product.variants=[];state.editor.product.variants.push({name:n.value.trim(),diff:parseInt(d.value)||0});n.value='';d.value='';renderProdForm();}"><i class="fas fa-plus"></i></button></div></div><div class="var-list">${flatVl || '<div class="empty-state" style="padding:20px"><i class="fas fa-sliders-h"></i><p>Belum ada varian</p></div>'}</div>`}</div><div class="etab ${state.editor.tab === 'status' ? 'active' : ''}"><div class="status-checks"><label class="status-check"><input type="checkbox" ${p.featured ? 'checked' : ''} onchange="state.editor.product.featured=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Produk Unggulan</div><div class="sc-desc">Tampil di section unggulan halaman depan</div></span></label><label class="status-check"><input type="checkbox" ${p.archived ? 'checked' : ''} onchange="state.editor.product.archived=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Diarsipkan</div><div class="sc-desc">Tidak tampil di katalog publik</div></span></label></div></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='products';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveProd()"><i class="fas fa-save"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='products';renderSide();renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="edit-tabs"><button class="edit-tab ${state.editor.tab === 'info' ? 'active' : ''}" onclick="state.editor.tab='info';renderProdForm()"><i data-lucide="circle-info"></i> Info</button><button class="edit-tab ${state.editor.tab === 'gallery' ? 'active' : ''}" onclick="state.editor.tab='gallery';renderProdForm()"><i data-lucide="images"></i> Gallery</button><button class="edit-tab ${state.editor.tab === 'variants' ? 'active' : ''}" onclick="state.editor.tab='variants';renderProdForm()"><i data-lucide="sliders-horizontal"></i> Varian</button><button class="edit-tab ${state.editor.tab === 'status' ? 'active' : ''}" onclick="state.editor.tab='status';renderProdForm()"><i data-lucide="toggle-right"></i> Status</button></div><div class="etab ${state.editor.tab === 'info' ? 'active' : ''}"><div class="form-grid-2"><div class="form-group"><label class="form-label">Kategori</label><select class="form-input" onchange="setEditField('category',this.value)">${CATS.map((c) => `<option value="${c}"${p.category === c ? ' selected' : ''}>${c}</option>`).join('')}</select></div><div class="form-group"><label class="form-label">Merek</label><input class="form-input" value="${esc(p.brand)}" onchange="setEditField('brand',this.value)" placeholder="Contoh: ASUS"></div><div class="form-group" style="grid-column:1/-1"><label class="form-label">Nama Produk</label><input class="form-input" value="${esc(p.name)}" onchange="setEditField('name',this.value)" placeholder="Contoh: ROG Strix G16"></div><div class="form-group"><label class="form-label">Harga Dasar (Rp)</label><input class="form-input" type="number" value="${p.price || 0}" onchange="setEditNum('price',this.value)"></div><div class="form-group"><label class="form-label">Stok</label><input class="form-input" type="number" value="${p.stock || 0}" onchange="setEditNum('stock',this.value)"></div><div class="form-group" style="grid-column:1/-1"><label class="form-label" style="display:flex;align-items:center;gap:6px"><i data-lucide="tag" style="color:var(--danger);font-size:11px"></i> Diskon <span style="font-size:9px;color:var(--muted);font-weight:400">(opsional, isi salah satu)</span></label><div style="display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Harga Diskon (Rp)</div><input class="form-input" type="number" value="${p.discount_price || ''}" placeholder="Kosongkan jika tidak diskon" onchange="state.editor.product.discount_price=parseInt(this.value)||null;if(this.value)state.editor.product.discount_percent=null;renderProdForm()"></div><div style="font-size:18px;color:var(--muted);padding-top:14px">atau</div><div style="flex:1"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Persentase Diskon (%)</div><input class="form-input" type="number" value="${p.discount_percent || ''}" placeholder="Contoh: 20" min="1" max="99" onchange="state.editor.product.discount_percent=parseInt(this.value)||null;if(this.value)state.editor.product.discount_price=null;renderProdForm()"></div></div></div><div class="form-group" style="grid-column:1/-1"><label class="form-label">Deskripsi</label><textarea class="form-input" rows="3" onchange="setEditField('description',this.value)" placeholder="Deskripsi singkat produk...">${esc(p.description || '')}</textarea></div></div><div style="margin-top:12px"><label class="form-label">Spesifikasi</label>${sp || '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Belum ada spesifikasi</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.product.specs.push('');renderProdForm()"><i data-lucide="plus"></i> Tambah Spesifikasi</button></div></div><div class="etab ${state.editor.tab === 'gallery' ? 'active' : ''}"><div class="gallery-grid">${gi || ''}</div><div class="upload-area" id="upArea" onclick="document.getElementById('permFileIn').click()"><i data-lucide="cloud-upload"></i><p>Klik atau seret gambar ke sini</p><div class="upload-hint" id="upHint">Klik atau seret gambar ke sini (maks 5MB per gambar, bisa pilih banyak)</div><div class="upload-progress" id="upProg"></div></div></div><div class="etab ${state.editor.tab === 'variants' ? 'active' : ''}"><div style="display:flex;gap:8px;margin-bottom:16px"><button class="btn btn-ghost btn-sm ${!isGrouped ? 'active' : ''}" style="${!isGrouped ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}" onclick="state.editor.product.variant_groups=[];if(state.editor.product.variants.length&&!state.editor.product.variants[0].g)state.editor.product.variants=state.editor.product.variants.map(v=>({name:v.name,diff:v.diff||0,stock:0}));renderProdForm()"><i data-lucide="list"></i> Varian Biasa</button><button class="btn btn-ghost btn-sm ${isGrouped ? 'active' : ''}" style="${isGrouped ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}" onclick="switchToGrouped()"><i data-lucide="layers"></i> Varian Group</button></div>${isGrouped ? `<div class="form-group"><label class="form-label">Grup Varian</label>${groupsHtml || '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Belum ada grup</div>'}<button class="btn btn-ghost btn-sm" onclick="state.editor.product.variant_groups.push({name:'Grup '+(state.editor.product.variant_groups.length+1),options:['Opsi 1','Opsi 2']});regenVariants();renderProdForm()"><i data-lucide="plus"></i> Tambah Grup</button></div>${state.editor.product.variant_groups.length ? `<div class="form-group"><label class="form-label">Kombinasi & Harga</label><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Atur selisih harga (dari harga dasar) dan stok untuk setiap kombinasi.</div><div class="var-list">${combosHtml || '<div class="empty-state" style="padding:16px"><i data-lucide="sliders-horizontal"></i><p>Tambahkan grup dan opsi di atas</p></div>'}</div></div>` : ''}` : `<div class="form-group"><label class="form-label">Tambah Varian</label><div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1"><input class="form-input" id="varNameIn" placeholder="Nama (mis: RAM 16GB)"></div><div style="width:140px"><input class="form-input" type="number" id="varDiffIn" placeholder="Selisih harga"></div><button class="btn btn-primary btn-sm" onclick="const n=document.getElementById('varNameIn'),d=document.getElementById('varDiffIn');if(n.value.trim()){if(!state.editor.product.variants)state.editor.product.variants=[];state.editor.product.variants.push({name:n.value.trim(),diff:parseInt(d.value)||0});n.value='';d.value='';renderProdForm();}"><i data-lucide="plus"></i></button></div></div><div class="var-list">${flatVl || '<div class="empty-state" style="padding:20px"><i data-lucide="sliders-horizontal"></i><p>Belum ada varian</p></div>'}</div>`}</div><div class="etab ${state.editor.tab === 'status' ? 'active' : ''}"><div class="status-checks"><label class="status-check"><input type="checkbox" ${p.featured ? 'checked' : ''} onchange="state.editor.product.featured=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Produk Unggulan</div><div class="sc-desc">Tampil di section unggulan halaman depan</div></span></label><label class="status-check"><input type="checkbox" ${p.archived ? 'checked' : ''} onchange="state.editor.product.archived=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Diarsipkan</div><div class="sc-desc">Tidak tampil di katalog publik</div></span></label></div></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='products';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveProd()"><i data-lucide="floppy-disk"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
   setTimeout(() => setupDrop(), 50);
 }
 function regenVariants() {
@@ -3359,7 +3364,7 @@ function viewProd(id) {
     .join('');
   const imgCounter =
     imgs.length > 1
-      ? `<div class="detail-img-counter"><i class="fas fa-images" style="margin-right:4px;font-size:10px"></i>1 / ${imgs.length}</div>`
+      ? `<div class="detail-img-counter"><i data-lucide="images" style="margin-right:4px;font-size:10px"></i>1 / ${imgs.length}</div>`
       : '';
   const dots =
     imgs.length > 1
@@ -3391,7 +3396,7 @@ function viewProd(id) {
     p.stock > 5 ? 'fa-check-circle' : p.stock > 0 ? 'fa-exclamation-circle' : 'fa-times-circle';
   const stockLabel = p.stock > 5 ? 'Tersedia' : p.stock > 0 ? 'Stok Terbatas' : 'Habis';
   document.getElementById('detailBox').innerHTML =
-    `<div class="detail-grid"><div class="detail-left"><img class="detail-img-bg" id="dBg" src="${esc(imgs[0])}" alt=""><div class="detail-img-wrap"><img class="detail-img-main" id="dMain" src="${esc(imgs[0])}" alt="${esc(p.name)}" onclick="openZoom(this.src)" style="cursor:zoom-in">${imgCounter}<div class="zoom-hint" onclick="openZoom(document.getElementById('dMain').src)" title="Zoom"><i class="fas fa-search-plus"></i></div>${dots}</div><div class="detail-thumbs">${th}</div></div><div class="detail-info">${catLabel ? `<div class="detail-cat"><i class="fas fa-tag"></i> ${esc(catLabel)}</div>` : ''}<div class="detail-brand">${getBrandHtml(p.brand, '18px')}</div><div class="detail-name">${esc(p.name)}</div><div class="detail-price">${fmt(p.price)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.featured ? '<span class="badge badge-gold"><i class="fas fa-star" style="margin-right:4px"></i>Unggulan</span>' : ''}<span class="badge ${p.stock > 5 ? 'badge-green' : p.stock > 0 ? 'badge-yellow' : 'badge-red'}"><i class="fas ${stockIcon}" style="margin-right:4px"></i>${stockLabel}${p.stock > 0 ? ' (' + p.stock + ')' : ''}</span><span class="badge badge-blue"><i class="fas fa-shopping-cart" style="margin-right:4px"></i>Terjual: ${p.sold}</span>${p.archived ? '<span class="badge badge-red"><i class="fas fa-archive" style="margin-right:4px"></i>Arsip</span>' : ''}</div><div class="detail-desc">${esc(p.description || 'Tidak ada deskripsi.')}</div>${sr ? `<table class="spec-table">${sr}</table>` : ''}${vc ? `<div class="variant-section"><div class="variant-label">Varian</div><div class="ad-var-list">${vc}</div></div>` : ''}<div class="wa-section"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" onclick="closeDetail()"><i class="fas fa-times"></i> Tutup</button>${hasPerm('products_edit') ? `<button class="btn btn-info btn-sm" onclick="closeDetail();openProdForm(${p.id})"><i class="fas fa-pen"></i> Edit</button>` : ''}</div></div></div></div>`;
+    `<div class="detail-grid"><div class="detail-left"><img class="detail-img-bg" id="dBg" src="${esc(imgs[0])}" alt=""><div class="detail-img-wrap"><img class="detail-img-main" id="dMain" src="${esc(imgs[0])}" alt="${esc(p.name)}" onclick="openZoom(this.src)" style="cursor:zoom-in">${imgCounter}<div class="zoom-hint" onclick="openZoom(document.getElementById('dMain').src)" title="Zoom"><i data-lucide="zoom-in"></i></div>${dots}</div><div class="detail-thumbs">${th}</div></div><div class="detail-info">${catLabel ? `<div class="detail-cat"><i data-lucide="tag"></i> ${esc(catLabel)}</div>` : ''}<div class="detail-brand">${getBrandHtml(p.brand, '18px')}</div><div class="detail-name">${esc(p.name)}</div><div class="detail-price">${fmt(p.price)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${p.featured ? '<span class="badge badge-gold"><i data-lucide="star" style="margin-right:4px"></i>Unggulan</span>' : ''}<span class="badge ${p.stock > 5 ? 'badge-green' : p.stock > 0 ? 'badge-yellow' : 'badge-red'}"><i class="fas ${stockIcon}" style="margin-right:4px"></i>${stockLabel}${p.stock > 0 ? ' (' + p.stock + ')' : ''}</span><span class="badge badge-blue"><i data-lucide="shopping-cart" style="margin-right:4px"></i>Terjual: ${p.sold}</span>${p.archived ? '<span class="badge badge-red"><i data-lucide="archive" style="margin-right:4px"></i>Arsip</span>' : ''}</div><div class="detail-desc">${esc(p.description || 'Tidak ada deskripsi.')}</div>${sr ? `<table class="spec-table">${sr}</table>` : ''}${vc ? `<div class="variant-section"><div class="variant-label">Varian</div><div class="ad-var-list">${vc}</div></div>` : ''}<div class="wa-section"><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" onclick="closeDetail()"><i data-lucide="x"></i> Tutup</button>${hasPerm('products_edit') ? `<button class="btn btn-info btn-sm" onclick="closeDetail();openProdForm(${p.id})"><i data-lucide="pencil"></i> Edit</button>` : ''}</div></div></div></div>`;
   document
     .getElementById('detailBox')
     .querySelectorAll('.detail-thumb[data-main-img]')
@@ -3418,7 +3423,7 @@ function renderUserForm() {
     isN = !u.id,
     el = document.getElementById('dashContent');
   document.getElementById('dashTitle').textContent = isN ? 'Tambah Pengguna' : 'Edit Pengguna';
-  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='users';renderSide();renderDash()"><i class="fas fa-arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="form-grid-2"><div class="form-group"><label class="form-label">Username</label><input class="form-input" value="${esc(u.username)}" onchange="state.editor.user.username=this.value" ${!isN ? 'readonly style="opacity:.6"' : ''}></div><div class="form-group"><label class="form-label">${isN ? 'Password' : 'Password Baru (kosongkan jika tidak diubah)'}</label><input class="form-input" type="password" value="${isN ? esc(u.password) : ''}" onchange="state.editor.user.password=this.value" placeholder="${isN ? 'Masukkan password' : 'Kosongkan jika tidak diubah'}"></div><div class="form-group"><label class="form-label">Nama Tampilan</label><input class="form-input" value="${esc(u.display_name || '')}" onchange="state.editor.user.display_name=this.value"></div><div class="form-group"><label class="form-label">Peran</label><select class="form-input" onchange="state.editor.user.role=this.value">${Object.entries(
+  el.innerHTML = `<div style="margin-bottom:16px"><button class="btn btn-ghost btn-sm" onclick="state.admin.panel='users';renderSide();renderDash()"><i data-lucide="arrow-left"></i> Kembali</button></div><div class="card"><div style="padding:20px"><div class="form-grid-2"><div class="form-group"><label class="form-label">Username</label><input class="form-input" value="${esc(u.username)}" onchange="state.editor.user.username=this.value" ${!isN ? 'readonly style="opacity:.6"' : ''}></div><div class="form-group"><label class="form-label">${isN ? 'Password' : 'Password Baru (kosongkan jika tidak diubah)'}</label><input class="form-input" type="password" value="${isN ? esc(u.password) : ''}" onchange="state.editor.user.password=this.value" placeholder="${isN ? 'Masukkan password' : 'Kosongkan jika tidak diubah'}"></div><div class="form-group"><label class="form-label">Nama Tampilan</label><input class="form-input" value="${esc(u.display_name || '')}" onchange="state.editor.user.display_name=this.value"></div><div class="form-group"><label class="form-label">Peran</label><select class="form-input" onchange="state.editor.user.role=this.value">${Object.entries(
     ROLES
   )
     .map(
@@ -3427,7 +3432,7 @@ function renderUserForm() {
     )
     .join(
       ''
-    )}</select></div></div><div class="form-group" style="margin-top:4px"><label class="status-check"><input type="checkbox" ${u.active ? 'checked' : ''} onchange="state.editor.user.active=this.checked"><span class="sc-box"><i class="fas fa-check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Nonaktif jika tidak boleh login</div></span></label></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='users';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
+    )}</select></div></div><div class="form-group" style="margin-top:4px"><label class="status-check"><input type="checkbox" ${u.active ? 'checked' : ''} onchange="state.editor.user.active=this.checked"><span class="sc-box"><i data-lucide="check"></i></span><span class="sc-text"><div class="sc-title">Aktif</div><div class="sc-desc">Nonaktif jika tidak boleh login</div></span></label></div><div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end"><button class="btn btn-ghost" onclick="state.admin.panel='users';renderSide();renderDash()">Batal</button><button class="btn btn-primary" onclick="saveUser()"><i data-lucide="floppy-disk"></i> ${isN ? 'Tambah' : 'Simpan'}</button></div></div></div>`;
 }
 async function saveUser() {
   const u = state.editor.user;
@@ -3583,7 +3588,7 @@ function viewReviewPhotos(id) {
   modal.className = 'modal-bg show';
   modal.style.zIndex = '340';
   modal.innerHTML = '<div style="background:var(--bg2);border-radius:var(--radius);max-width:560px;width:95%;max-height:85vh;overflow:auto;box-shadow:var(--sh-xl);padding:20px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><h3 style="margin:0;font-size:15px;font-weight:700"><i class="fas fa-images" style="margin-right:8px;color:var(--accent)"></i>Foto Ulasan — ' + esc(rev.name) + '</h3><button class="btn btn-ghost btn-sm" onclick="closeRevGallery()"><i class="fas fa-times"></i></button></div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px"><h3 style="margin:0;font-size:15px;font-weight:700"><i data-lucide="images" style="margin-right:8px;color:var(--accent)"></i>Foto Ulasan — ' + esc(rev.name) + '</h3><button class="btn btn-ghost btn-sm" onclick="closeRevGallery()"><i data-lucide="x"></i></button></div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">' + rev.photos.map((p, i) => '<div style="position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:1;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:all .2s" onclick="closeRevGallery();openZoomForGallery(state.ui.revGalleryPhotos,' + i + ')" onmouseenter="this.style.borderColor=\'var(--accent)\'" onmouseleave="this.style.borderColor=\'var(--border)\'"><img src="' + esc(p) + '" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"></div>').join('') + '</div></div>';
   modal.addEventListener('click', function(e) { if (e.target === modal) closeRevGallery(); });
   document.body.appendChild(modal);
@@ -3608,7 +3613,7 @@ function updateZoomNav() {
     nav = document.createElement('div');
     nav.id = 'zoomNav';
     nav.style.cssText = 'position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10';
-    nav.innerHTML = '<button id="zoomPrev" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i class="fas fa-chevron-left"></i></button><span id="zoomCounter" style="color:rgba(255,255,255,.5);font-size:12px;display:flex;align-items:center;min-width:50px;justify-content:center">1/3</span><button id="zoomNext" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i class="fas fa-chevron-right"></i></button>';
+    nav.innerHTML = '<button id="zoomPrev" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i data-lucide="chevron-left"></i></button><span id="zoomCounter" style="color:rgba(255,255,255,.5);font-size:12px;display:flex;align-items:center;min-width:50px;justify-content:center">1/3</span><button id="zoomNext" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.08);backdrop-filter:blur(8px);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s"><i data-lucide="chevron-right"></i></button>';
     document.getElementById('zoomOverlay').appendChild(nav);
     document.getElementById('zoomPrev').addEventListener('click', function(e) { e.stopPropagation(); navZoom(-1); });
     document.getElementById('zoomNext').addEventListener('click', function(e) { e.stopPropagation(); navZoom(1); });
@@ -3677,11 +3682,11 @@ function updateDashTop() {
   const ti = isDark ? 'fa-sun' : 'fa-moon';
   el.innerHTML = `
     <div class="mob-dropdown">
-      <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
+      <button class="btn btn-ghost btn-sm mob-dropdown-trigger" onclick="toggleMobDropdown(event)"><i data-lucide="ellipsis-vertical"></i></button>
       <div class="mob-dropdown-menu">
-        <button class="mob-dropdown-item" onclick="goToCatalog();closeMobDropdown()"><i class="fas fa-external-link-alt"></i> Toko</button>
+        <button class="mob-dropdown-item" onclick="goToCatalog();closeMobDropdown()"><i data-lucide="external-link"></i> Toko</button>
         <button class="mob-dropdown-item" onclick="toggleTheme();closeMobDropdown()"><i class="fas ${ti}"></i> Ganti Mode</button>
-        <button class="mob-dropdown-item danger" onclick="doLogout();closeMobDropdown()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        <button class="mob-dropdown-item danger" onclick="doLogout();closeMobDropdown()"><i data-lucide="log-out"></i> Logout</button>
       </div>
     </div>`;
 }
