@@ -950,7 +950,7 @@
     var el = document.createElement('div');
     el.className = 'lc-escalation-toast';
     el.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>' + esc(customerName || 'Customer') + '</strong> butuh bantuan admin <button class="lc-escalation-toast-btn">Ambil Alih</button>';
-    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:Plus Jakarta Sans,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
+    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
     el.querySelector('.lc-escalation-toast-btn').style.cssText = 'background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;';
     el.querySelector('.lc-escalation-toast-btn').onclick = function (e) {
       e.stopPropagation();
