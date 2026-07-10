@@ -1728,16 +1728,312 @@ body.dark .g5a-input::placeholder { color: rgba(255, 255, 255, 0.3); }
 }
 
 /* ===========================
-   ESCALATION TOAST ANIMATION
+   ESCALATION TOAST SYSTEM (v2)
    =========================== */
-@keyframes lcToastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Toast Container — stacking ke atas */
+.lc-toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+  width: 420px;
+  max-width: calc(100vw - 32px);
 }
-@keyframes lcToastOut {
-  from { opacity: 1; transform: translateX(-50%) translateY(0); }
-  to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+.lc-toast-container > * {
+  pointer-events: auto;
 }
-.lc-escalation-toast-btn:hover {
-  background: #D97706 !important;
+
+/* Individual Toast Card */
+.lc-toast {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  font-family: Inter, system-ui, sans-serif;
+  box-shadow:
+    0 4px 6px -1px rgba(0,0,0,0.1),
+    0 10px 30px -5px rgba(0,0,0,0.12),
+    0 0 0 1px rgba(0,0,0,0.03);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  animation: lcToastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+  max-width: 100%;
+}
+.lc-toast--out {
+  animation: lcToastSlideOut 0.3s ease forwards;
+}
+
+/* Accent bar di kiri */
+.lc-toast-accent-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  flex-shrink: 0;
+}
+
+/* Toast body */
+.lc-toast-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 18px;
+  position: relative;
+}
+
+/* Avatar */
+.lc-toast-avatar {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Content area */
+.lc-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+.lc-toast-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lc-toast-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  flex-shrink: 0;
+}
+.lc-toast-label {
+  font-weight: 400;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.lc-toast-sub {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+}
+
+/* Ambil Alih button */
+.lc-toast-btn {
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.lc-toast-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.lc-toast-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* Close button */
+.lc-toast-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.3;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.lc-toast-close:hover {
+  opacity: 0.7;
+  background: rgba(0,0,0,0.06);
+}
+.lc-toast-close svg, .lc-toast-close i {
+  width: 14px;
+  height: 14px;
+}
+
+/* Progress bar */
+.lc-toast-progress {
+  height: 3px;
+  width: 100%;
+  opacity: 0.25;
+  flex-shrink: 0;
+}
+.lc-toast-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: rgba(255,255,255,0.9);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Urgency color themes */
+.lc-toast--initial {
+  background: rgba(254,243,199,0.92);
+  color: #92400E;
+  border: 1px solid rgba(245,158,11,0.3);
+}
+.lc-toast--normal {
+  background: rgba(254,243,199,0.92);
+  color: #92400E;
+  border: 1px solid rgba(245,158,11,0.25);
+}
+.lc-toast--warn {
+  background: rgba(255,247,237,0.92);
+  color: #9A3412;
+  border: 1px solid rgba(249,115,22,0.3);
+}
+.lc-toast--urgent {
+  background: rgba(254,242,242,0.92);
+  color: #991B1B;
+  border: 1px solid rgba(239,68,68,0.3);
+  animation: lcToastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), lcToastUrgentGlow 2s ease-in-out infinite 0.5s;
+}
+.lc-toast--urgent.lc-toast--out {
+  animation: lcToastSlideOut 0.3s ease forwards;
+}
+
+@keyframes lcToastUrgentGlow {
+  0%, 100% { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 30px -5px rgba(239,68,68,0.15), 0 0 0 1px rgba(0,0,0,0.03); }
+  50% { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 10px 30px -5px rgba(239,68,68,0.3), 0 0 0 3px rgba(239,68,68,0.12); }
+}
+
+/* Slide animations */
+@keyframes lcToastSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes lcToastSlideOut {
+  from { opacity: 1; transform: translateY(0) scale(1); max-height: 120px; margin-bottom: 0; }
+  to { opacity: 0; transform: translateY(-8px) scale(0.96); max-height: 0; margin-bottom: -10px; padding: 0; }
+}
+
+/* Dark mode */
+body.dark .lc-toast--initial,
+body.dark .lc-toast--normal {
+  background: rgba(120, 80, 10, 0.92);
+  color: #FEF3C7;
+  border-color: rgba(245,158,11,0.25);
+}
+body.dark .lc-toast--warn {
+  background: rgba(120, 60, 5, 0.92);
+  color: #FFEDD5;
+  border-color: rgba(249,115,22,0.25);
+}
+body.dark .lc-toast--urgent {
+  background: rgba(120, 20, 20, 0.92);
+  color: #FEE2E2;
+  border-color: rgba(239,68,68,0.25);
+}
+body.dark .lc-toast-progress { opacity: 0.15; }
+body.dark .lc-toast-progress-bar { background: rgba(255,255,255,0.7); }
+body.dark .lc-toast-close:hover { background: rgba(255,255,255,0.1); }
+body.dark .lc-toast-avatar { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+/* Mobile */
+@media (max-width: 480px) {
+  .lc-toast-container { width: calc(100vw - 24px); bottom: 16px; gap: 8px; }
+  .lc-toast-body { padding: 12px 12px 12px 16px; gap: 10px; }
+  .lc-toast-avatar { width: 34px; height: 34px; min-width: 34px; font-size: 13px; border-radius: 8px; }
+  .lc-toast-title { font-size: 12px; }
+  .lc-toast-btn { padding: 6px 12px; font-size: 11px; }
+  .lc-toast-sub { font-size: 10px; }
+}
+
+/* Legacy escalation toast fallback (clean up) */
+.lc-escalation-toast:not(.lc-toast) {
+  display: none;
+}
+
+/* ===========================
+   WAITING TIME INDICATOR
+   =========================== */
+.lc-waiting-time {
+  font-size: 10px;
+  font-weight: 700;
+  color: #D97706;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.lc-waiting-time--warn {
+  color: #EA580C;
+  background: rgba(249, 115, 22, 0.12);
+}
+.lc-waiting-time--urgent {
+  color: #DC2626;
+  background: rgba(239, 68, 68, 0.1);
+  animation: lc-waiting-pulse 1.5s ease-in-out infinite;
+}
+@keyframes lc-waiting-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Session item glow untuk yang menunggu */
+.lc-session-item.is-waiting {
+  border-left: 3px solid #F59E0B;
+}
+body.dark .lc-session-item.is-waiting {
+  border-left-color: #FBBF24;
+}
+
+/* ===========================
+   PULSING SIDEBAR BADGE
+   =========================== */
+.lc-badge-pulse {
+  animation: lc-badge-pulse 1.2s ease-in-out infinite !important;
+}
+@keyframes lc-badge-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  50% { transform: scale(1.15); box-shadow: 0 0 8px 2px rgba(245, 158, 11, 0.4); }
+}
+
+/* ===========================
+   NAGGING TOAST VARIANTS
+   =========================== */
+.lc-nag-toast {
+  border-width: 2px !important;
 }

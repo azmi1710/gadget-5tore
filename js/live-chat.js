@@ -33,6 +33,8 @@
     closedSessions: [],
     closedCount: 0,
     activeFilter: null, // null = all, 'ai', 'connecting', 'admin'
+    _inboxObsSetup: false,
+    _naggingTimer: null,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -57,6 +59,21 @@
     if (diff < 3600) return Math.floor(diff / 60) + 'm lalu';
     if (diff < 86400) return Math.floor(diff / 3600) + 'j lalu';
     return Math.floor(diff / 86400) + 'h lalu';
+  }
+
+  // ── Waiting Time Helper (untuk mode 'connecting') ──
+  function waitingMinutes(dateStr) {
+    if (!dateStr) return 0;
+    return Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  }
+
+  function waitingTimeStr(dateStr) {
+    var m = waitingMinutes(dateStr);
+    if (m < 1) return 'Baru saja';
+    if (m < 60) return m + 'm';
+    var h = Math.floor(m / 60);
+    var rm = m % 60;
+    return h + 'j' + (rm > 0 ? rm + 'm' : '');
   }
 
   function getAdminName() {
@@ -947,31 +964,130 @@
     } catch (e) { /* ignore */ }
   }
 
-  // ── Escalation Toast (klik → buka session) ──
-  function showEscalationToast(customerName, sessionId) {
-    var el = document.createElement('div');
-    el.className = 'lc-escalation-toast';
-    el.innerHTML = '<i data-lucide="triangle-alert"></i> <strong>' + esc(customerName || 'Customer') + '</strong> butuh bantuan admin <button class="lc-escalation-toast-btn">Ambil Alih</button>';
-    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#FEF3C7;color:#92400E;border:1px solid #F59E0B;border-radius:12px;padding:12px 20px;font-size:13px;font-family:Inter,sans-serif;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);animation:lcToastIn 0.35s ease;max-width:calc(100vw - 32px);';
-    el.querySelector('.lc-escalation-toast-btn').style.cssText = 'background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;';
-    el.querySelector('.lc-escalation-toast-btn').onclick = function (e) {
+  // ── Escalation / Nagging Toast (unified, with progress bar, stacking, avatar) ──
+  var _toastContainer = null;
+  var _activeToasts = 0;
+
+  function getToastContainer() {
+    if (_toastContainer && _toastContainer.parentNode) return _toastContainer;
+    _toastContainer = document.createElement('div');
+    _toastContainer.id = 'lcToastContainer';
+    _toastContainer.className = 'lc-toast-container';
+    document.body.appendChild(_toastContainer);
+    return _toastContainer;
+  }
+
+  /**
+   * showAlertToast(opts)
+   * opts.customerName, opts.sessionId, opts.customerPhone,
+   * opts.urgency: 'initial' | 'normal' | 'warn' | 'urgent',
+   * opts.autoDismiss: ms (default 8000)
+   */
+  function showAlertToast(opts) {
+    var container = getToastContainer();
+    var urgency = opts.urgency || 'initial';
+    var duration = opts.autoDismiss || 8000;
+
+    // Tentukan warna berdasarkan urgency
+    var theme = {
+      initial: { bg: 'rgba(254,243,199,0.92)', border: '#F59E0B', color: '#92400E', icon: 'triangle-alert', accent: '#F59E0B', label: 'butuh bantuan admin' },
+      normal:  { bg: 'rgba(254,243,199,0.92)', border: '#F59E0B', color: '#92400E', icon: 'clock',        accent: '#F59E0B', label: 'menunggu' },
+      warn:    { bg: 'rgba(255,247,237,0.92)', border: '#F97316', color: '#9A3412', icon: 'triangle-alert', accent: '#F97316', label: 'sudah' },
+      urgent:  { bg: 'rgba(254,242,242,0.92)', border: '#EF4444', color: '#991B1B', icon: 'circle-alert',  accent: '#EF4444', label: 'sudah' },
+    }[urgency];
+
+    var initial = (opts.customerName || 'C').charAt(0).toUpperCase();
+    var wm = waitingMinutes(null);
+    // Cek waiting time dari sessions
+    var sessionData = ctx.sessions.find(function(s) { return s.session_id === opts.sessionId; });
+    if (sessionData) {
+      wm = waitingMinutes(sessionData.updated_at || sessionData.last_message_at);
+    }
+    var waitStr = urgency === 'initial' ? '' : (' ' + waitingTimeStr(sessionData ? (sessionData.updated_at || sessionData.last_message_at) : null) + '!');
+
+    // Buat toast element
+    var toast = document.createElement('div');
+    toast.className = 'lc-toast lc-toast--' + urgency;
+    toast.innerHTML =
+      '<div class="lc-toast-accent-bar" style="background:' + theme.accent + '"></div>'
+      + '<div class="lc-toast-body">'
+      +   '<div class="lc-toast-avatar" style="background:' + theme.accent + '">' + esc(initial) + '</div>'
+      +   '<div class="lc-toast-content">'
+      +     '<div class="lc-toast-title"><i data-lucide="' + theme.icon + '" class="lc-toast-icon" style="color:' + theme.accent + '"></i> <strong>' + esc(opts.customerName || 'Customer') + '</strong> <span class="lc-toast-label">' + theme.label + waitStr + '</span></div>'
+      +     (opts.customerPhone ? '<div class="lc-toast-sub"><i data-lucide="phone" style="font-size:10px"></i> ' + esc(opts.customerPhone) + '</div>' : '')
+      +   '</div>'
+      +   '<button class="lc-toast-btn" style="background:' + theme.accent + '">Ambil Alih</button>'
+      +   '<button class="lc-toast-close" title="Tutup"><i data-lucide="x" style="pointer-events:none"></i></button>'
+      + '</div>'
+      + '<div class="lc-toast-progress" style="background:' + theme.accent + '"><div class="lc-toast-progress-bar"></div></div>';
+
+    // Progress bar animation
+    var progressBar = toast.querySelector('.lc-toast-progress-bar');
+    requestAnimationFrame(function () {
+      progressBar.style.transition = 'width ' + duration + 'ms linear';
+      progressBar.style.width = '0%';
+    });
+
+    // Tombol Ambil Alih
+    toast.querySelector('.lc-toast-btn').onclick = function (e) {
       e.stopPropagation();
-      el.remove();
-      // Buka panel chat di dashboard kalau belum di situ
+      dismissToast(toast);
+      takeoverSession(opts.sessionId);
       if (state) state.admin.panel = 'chat';
       if (typeof renderSide === 'function') renderSide();
       if (typeof renderDash === 'function') renderDash();
       setTimeout(function () {
-        if (typeof selectSession === 'function') selectSession(sessionId);
+        if (typeof selectSession === 'function') selectSession(opts.sessionId);
       }, 100);
     };
+
+    // Tombol close
+    toast.querySelector('.lc-toast-close').onclick = function (e) {
+      e.stopPropagation();
+      dismissToast(toast);
+    };
+
+    // Auto dismiss
+    var timer = setTimeout(function () { dismissToast(toast); }, duration);
+    toast._dismissTimer = timer;
+
+    // Tambahkan ke container (prepend biar yang baru di atas)
+    container.prepend(toast);
+    _activeToasts++;
+
+    // Re-init lucide icons di dalam toast
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      lucide.createIcons({ nodes: [toast] });
+    }
+  }
+
+  function dismissToast(toast) {
+    if (!toast || !toast.parentNode || toast._dismissed) return;
+    toast._dismissed = true;
+    clearTimeout(toast._dismissTimer);
+    toast.classList.add('lc-toast--out');
     setTimeout(function () {
-      if (el.parentNode) {
-        el.style.animation = 'lcToastOut 0.3s ease forwards';
-        setTimeout(function () { if (el.parentNode) el.remove(); }, 300);
+      if (toast.parentNode) {
+        toast.remove();
+        _activeToasts--;
+        // Hapus container kalau udah kosong
+        if (_activeToasts <= 0 && _toastContainer) {
+          _activeToasts = 0;
+          // Biarkan container, cuma kosong
+        }
       }
-    }, 8000);
-    document.body.appendChild(el);
+    }, 350);
+  }
+
+  // ── showEscalationToast (backward compat) ──
+  function showEscalationToast(customerName, sessionId) {
+    var sessionData = ctx.sessions.find(function(s) { return s.session_id === sessionId; });
+    showAlertToast({
+      customerName: customerName,
+      sessionId: sessionId,
+      customerPhone: sessionData ? sessionData.customer_phone : '',
+      urgency: 'initial',
+    });
   }
 
   // ── Admin Inbox ────────────────────────────────
@@ -1080,8 +1196,17 @@
       var initial = (s.customer_name || 'C').charAt(0).toUpperCase();
       var statusInfo = getStatusInfo(s);
       var unreadCls = s.unread_by_admin > 0 ? 'show' : '';
+      var isConnecting = s.mode === 'connecting';
 
-      return '<div class="lc-session-item' + (isActive ? ' active' : '') + (s.unread_by_admin > 0 ? ' has-unread' : '') + '" '
+      // Waiting time indicator untuk session yang menunggu admin
+      var waitEl = '';
+      if (isConnecting) {
+        var wm = waitingMinutes(s.updated_at || s.last_message_at);
+        var wCls = wm >= 6 ? 'lc-waiting-time lc-waiting-time--urgent' : (wm >= 3 ? 'lc-waiting-time lc-waiting-time--warn' : 'lc-waiting-time');
+        waitEl = '<span class="' + wCls + '">' + waitingTimeStr(s.updated_at || s.last_message_at) + '</span>';
+      }
+
+      return '<div class="lc-session-item' + (isActive ? ' active' : '') + (s.unread_by_admin > 0 ? ' has-unread' : '') + (isConnecting ? ' is-waiting' : '') + '" '
         + 'onclick="window.__lcSelectSession(\'' + s.session_id + '\')">'
         + '<div class="lc-session-avatar">' + esc(initial) + '</div>'
         + '<div class="lc-session-info">'
@@ -1090,6 +1215,7 @@
         + '</div>'
         + '<div class="lc-session-meta">'
         + '<span class="lc-session-time">' + timeAgo(s.last_message_at) + '</span>'
+        + waitEl
         + '<span class="lc-session-unread ' + unreadCls + '">' + s.unread_by_admin + '</span>'
         + '</div>'
         + '</div>';
@@ -1107,9 +1233,11 @@
       badge.style.display = '';
       badge.textContent = total > 99 ? '99+' : total;
       badge.style.background = waiting > 0 ? '#F59E0B' : '';
+      badge.classList.toggle('lc-badge-pulse', waiting > 0);
     } else {
       badge.style.display = 'none';
       badge.style.background = '';
+      badge.classList.remove('lc-badge-pulse');
     }
   }
 
@@ -1715,6 +1843,69 @@
 
 
   // ═══════════════════════════════════════════════════
+  //  NAGGING TIMER (Reminder berulang buat session 'connecting')
+  // ═══════════════════════════════════════════════════
+
+  function stopNaggingTimer() {
+    if (ctx._naggingTimer) {
+      clearInterval(ctx._naggingTimer);
+      ctx._naggingTimer = null;
+    }
+  }
+
+  function startNaggingTimer() {
+    stopNaggingTimer();
+    // Cek tiap 30 detik, tapi toast muncul tiap 2 menit (diatur via _lastNag)
+    var lastNagTimes = {}; // sessionId → timestamp terakhir nag
+    var CHECK_INTERVAL = 30000; // 30 detik
+    var NAG_INTERVAL = 120000; // 2 menit antar nag per session
+
+    ctx._naggingTimer = setInterval(function () {
+      // Pastikan admin masih login dan di dashboard
+      var isDashboard = $('view-dashboard') && $('view-dashboard').classList.contains('active');
+      var curRole = state && state.session && state.session.currentUser && state.session.currentUser.role;
+      if (!isDashboard || (curRole !== 'admin' && curRole !== 'editor')) return;
+
+      // Cari session yang masih connecting dan belum di-nag dalam 2 menit terakhir
+      var now = Date.now();
+      var waitingSessions = ctx.sessions.filter(function (s) {
+        if (s.mode !== 'connecting') return false;
+        var lastNag = lastNagTimes[s.session_id] || 0;
+        return (now - lastNag) >= NAG_INTERVAL;
+      });
+
+      if (!waitingSessions.length) return;
+
+      // Tampilkan nagging toast (paling lama menunggu dulu)
+      waitingSessions.sort(function (a, b) {
+        return new Date(a.updated_at || a.last_message_at) - new Date(b.updated_at || b.last_message_at);
+      });
+
+      // Ambil maksimal 1 session per cycle biar ga spam
+      var target = waitingSessions[0];
+      lastNagTimes[target.session_id] = now;
+
+      var wm = waitingMinutes(target.updated_at || target.last_message_at);
+      var urgency = wm >= 6 ? 'urgent' : (wm >= 3 ? 'warn' : 'normal');
+
+      showAlertToast({
+        customerName: target.customer_name,
+        sessionId: target.session_id,
+        customerPhone: target.customer_phone || '',
+        urgency: urgency,
+      });
+
+      playEscalationSound();
+
+      // Cleanup lastNagTimes untuk session yang sudah bukan connecting
+      for (var id in lastNagTimes) {
+        var stillWaiting = ctx.sessions.some(function (s) { return s.session_id === id && s.mode === 'connecting'; });
+        if (!stillWaiting) delete lastNagTimes[id];
+      }
+    }, CHECK_INTERVAL);
+  }
+
+  // ═══════════════════════════════════════════════════
   //  INIT
   // ═══════════════════════════════════════════════════
 
@@ -1724,6 +1915,15 @@
     loadAdminSessions();
     loadClosedCount();
     subscribeAdminRealtime();
+    startNaggingTimer();
+    // Auto-refresh session list tiap 30 detik biar waiting time indicator update
+    if (ctx._sessionListTimer) clearInterval(ctx._sessionListTimer);
+    ctx._sessionListTimer = setInterval(function () {
+      var isDashboard = $('view-dashboard') && $('view-dashboard').classList.contains('active');
+      if (isDashboard && ctx.sessions.some(function (s) { return s.mode === 'connecting'; })) {
+        renderSessionList();
+      }
+    }, 30000);
   }
 
   // ── Ensure inbox panel stays stable via MutationObserver ──
