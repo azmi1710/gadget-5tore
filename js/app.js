@@ -22,7 +22,7 @@ setTimeout(() => {
   }
 }, 7000);
 async function init() {
-  if (LOGO_URL) { const ids = ['pubLogoImg', 'sideLogoImg', 'loginLogoImg']; ids.forEach((id) => { const el = document.getElementById(id); if (el) el.src = LOGO_URL; }); }
+  if (LOGO_URL) { const ids = ['pubLogoImg', 'loginLogoImg']; ids.forEach((id) => { const el = document.getElementById(id); if (el) el.src = LOGO_URL; }); }
   const ov = document.getElementById('loadingOverlay');
   const race = (p, ms) =>
     Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('Timeout')), ms))]);
