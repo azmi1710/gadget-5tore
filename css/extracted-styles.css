@@ -17,7 +17,7 @@
 .crop-ratio-group { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
 .crop-action-group { display: flex; gap: 8px; }
 .footer-brand { margin-bottom: 12px; }
-.footer-brand-text { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.3px; }
+.footer-brand-text { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.3px; }
 .footer-brand-accent { color: var(--accent); }
 .footer-tagline { font-size: 12px; color: rgba(255, 255, 255, 0.35); line-height: 1.7; max-width: 280px; }
 .footer-col-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255, 255, 255, 0.4); margin-bottom: 14px; }
@@ -54,7 +54,7 @@ body.dark .tbl-disc-orig { color: rgba(255, 255, 255, 0.3); }
 .access-close-btn:hover { background: var(--accent); color: #fff; transform: rotate(90deg); }
 .access-head { padding: 36px 32px 18px; text-align: center; position: relative; z-index: 1; }
 .access-head-icon { width: 58px; height: 58px; margin: 0 auto 16px; border-radius: 18px; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; box-shadow: 0 10px 28px rgba(var(--accent-rgb),0.3); animation: accessLogoGlow 3s ease-in-out infinite; }
-.access-head h2 { font-family: 'Space Grotesk', sans-serif; font-size: 23px; font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -0.4px; }
+.access-head h2 { font-family: 'Sora', sans-serif; font-size: 23px; font-weight: 800; color: #fff; margin: 0 0 6px; letter-spacing: -0.4px; }
 .access-head p { font-size: 13px; color: rgba(255, 255, 255, 0.45); margin: 0; }
 .access-body { padding: 8px 28px 28px; position: relative; z-index: 1; }
 .access-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 18px; }
@@ -66,7 +66,7 @@ body.dark .tbl-disc-orig { color: rgba(255, 255, 255, 0.3); }
 .role-card--admin .role-card-icon { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); box-shadow: 0 6px 16px rgba(var(--accent-rgb),0.35); }
 .role-card--editor .role-card-icon { background: linear-gradient(135deg, #4F46E5, #312E81); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35); }
 .role-card-body { flex: 1; min-width: 0; }
-.role-card-title { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.1px; margin-bottom: 2px; }
+.role-card-title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.1px; margin-bottom: 2px; }
 .role-card-desc { font-size: 12px; color: rgba(255, 255, 255, 0.45); line-height: 1.4; }
 .role-card-arrow { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: rgba(var(--accent-rgb),0.15); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; transition: all 0.25s var(--ease); }
 .role-card:hover .role-card-arrow { background: var(--accent); color: #fff; transform: translateX(3px); }
@@ -80,16 +80,16 @@ body.dark .tbl-disc-orig { color: rgba(255, 255, 255, 0.3); }
 @media (max-width: 380px) { .role-card-arrow { display: none; } }
 @media (prefers-reduced-motion: reduce) { .access-card, .role-card, .role-card-icon, .role-card-arrow, .role-card-shine, .access-head-icon, .access-close-btn { animation: none !important; transition: none !important; } }
 .stat-card--gold .stat-icon { background: rgba(var(--accent-rgb),0.12); color: var(--accent); }
-.stat-card--gold:hover { border-color: rgba(var(--accent-rgb),0.3); box-shadow: 0 8px 24px rgba(var(--accent-rgb),0.12); }
+.stat-card--gold:hover { box-shadow: 0 8px 24px rgba(var(--accent-rgb),0.12); }
 .stat-card--gold::after { background: var(--accent); }
 .stat-card--teal .stat-icon { background: rgba(45, 155, 131, 0.12); color: #2D9B83; }
-.stat-card--teal:hover { border-color: rgba(45, 155, 131, 0.3); box-shadow: 0 8px 24px rgba(45, 155, 131, 0.12); }
+.stat-card--teal:hover { box-shadow: 0 8px 24px rgba(45, 155, 131, 0.12); }
 .stat-card--teal::after { background: #2D9B83; }
 .stat-card--amber .stat-icon { background: rgba(217, 119, 42, 0.12); color: #D9772A; }
-.stat-card--amber:hover { border-color: rgba(217, 119, 42, 0.3); box-shadow: 0 8px 24px rgba(217, 119, 42, 0.12); }
+.stat-card--amber:hover { box-shadow: 0 8px 24px rgba(217, 119, 42, 0.12); }
 .stat-card--amber::after { background: #D9772A; }
 .stat-card--rose .stat-icon { background: rgba(210, 80, 80, 0.12); color: #D25050; }
-.stat-card--rose:hover { border-color: rgba(210, 80, 80, 0.3); box-shadow: 0 8px 24px rgba(210, 80, 80, 0.12); }
+.stat-card--rose:hover { box-shadow: 0 8px 24px rgba(210, 80, 80, 0.12); }
 .stat-card--rose::after { background: #D25050; }
 .card--gold { border-top: 3px solid var(--accent); }
 .card--teal { border-top: 3px solid #2D9B83; }
@@ -145,7 +145,7 @@ body.dark .greeting-time { background: rgba(255,255,255,.06); color: var(--muted
 .review-filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .review-filter-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; min-width: 50px; }
 .review-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.review-filter-chip { padding: 6px 14px; border-radius: 50px; border: 1.5px solid var(--border); background: var(--bg); color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .25s var(--ease); user-select: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.review-filter-chip { padding: 6px 14px; border-radius: 50px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .25s var(--ease); user-select: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .review-filter-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
 .review-filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 4px 14px var(--accent-dim); }
 .review-filter-chip .chip-count { font-size: 10px; opacity: 0.7; }

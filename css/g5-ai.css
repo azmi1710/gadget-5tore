@@ -4,47 +4,33 @@
    Premium 2025 Redesign
    ============================================ */
 
-/* --- FAB Button --- */
+/* --- FAB Button (floating bubble) --- */
 .g5ai-fab {
   position: fixed;
-  bottom: 28px;
-  right: 28px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  right: 0;
+  top: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 50% 0 0 50%;
   border: none;
-  background: linear-gradient(135deg, #D4A239 0%, #C8A44E 40%, #B8922A 100%);
+  background: #C8A44E;
   color: #fff;
-  font-size: 22px;
-  cursor: pointer;
-  box-shadow:
-    0 6px 24px rgba(200, 164, 78, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    0 0 40px rgba(212, 162, 57, 0.15);
+  font-size: 14px;
+  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   z-index: 500;
-  animation: g5aiFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2), g5aiFabPulse 3s ease-in-out 1.5s infinite;
+  box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.12);
 }
 
-.g5ai-fab:hover {
-  transform: scale(1.1) translateY(-2px);
-  box-shadow:
-    0 10px 36px rgba(200, 164, 78, 0.55),
-    0 4px 14px rgba(0, 0, 0, 0.14),
-    0 0 50px rgba(212, 162, 57, 0.25);
-  animation: g5aiFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-}
-
-.g5ai-fab:active {
-  transform: scale(0.95);
-  animation: none;
-}
+.g5ai-fab:active { cursor: grabbing; }
 
 .g5ai-fab .g5ai-fab-icon {
-  transition: transform 0.3s ease;
+  transition: none;
 }
 
 .g5ai-fab.open .g5ai-fab-icon {
@@ -53,60 +39,30 @@
 
 .g5ai-fab-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  top: -3px;
+  left: -3px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
   background: var(--danger, #B91C1C);
   color: #fff;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 800;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
+  padding: 0 3px;
   border: 2px solid var(--bg, #F4F1EA);
-  display: none;
-  animation: g5aiBadgePop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
-  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.4);
-}
-
-@keyframes g5aiBadgePop {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-@keyframes g5aiFabIn {
-  from { opacity: 0; transform: scale(0.5) translateY(20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes g5aiFabPulse {
-  0%, 100% {
-    box-shadow:
-      0 6px 24px rgba(200, 164, 78, 0.45),
-      0 2px 8px rgba(0, 0, 0, 0.12),
-      0 0 40px rgba(212, 162, 57, 0.15);
-  }
-  50% {
-    box-shadow:
-      0 6px 24px rgba(200, 164, 78, 0.45),
-      0 2px 8px rgba(0, 0, 0, 0.12),
-      0 0 55px rgba(212, 162, 57, 0.3),
-      0 0 20px rgba(212, 162, 57, 0.1);
-  }
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.3);
 }
 
 /* --- Chat Popup --- */
 .g5ai-popup {
   position: fixed;
-  bottom: 96px;
-  right: 28px;
   width: 400px;
   max-width: calc(100vw - 32px);
   height: 540px;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 80px);
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -180,7 +136,7 @@
   font-size: 15px;
   font-weight: 800;
   color: #F1F0ED;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Sora', sans-serif;
   letter-spacing: -0.2px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -303,7 +259,7 @@
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   color: var(--fg, #1B1611);
   min-width: 0;
   transition: background 0.2s ease;
@@ -352,7 +308,7 @@
   background: transparent;
   padding: 8px 14px 8px 24px;
   font-size: 11.5px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   color: var(--fg2, #38322A);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -600,7 +556,7 @@ body.dark .g5ai-msg table th {
   border-radius: 14px;
   padding: 11px 16px;
   font-size: 13px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   color: var(--fg, #1B1611);
   background: rgba(0, 0, 0, 0.025);
   resize: none;
@@ -694,7 +650,7 @@ body.dark .g5ai-msg table th {
   font-size: 17px;
   font-weight: 800;
   color: var(--fg, #1B1611);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Sora', sans-serif;
   background: linear-gradient(135deg, var(--fg, #1B1611) 0%, var(--accent, #C8A44E) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -729,7 +685,7 @@ body.dark .g5ai-msg table th {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
@@ -921,50 +877,30 @@ body.dark .g5ai-welcome-chip:hover {
 body.dark .g5ai-fab-badge { border-color: #0A0B14; }
 
 body.dark .g5ai-fab {
-  box-shadow:
-    0 6px 24px rgba(200, 164, 78, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.3),
-    0 0 40px rgba(212, 162, 57, 0.15);
+  background: #A6873E;
+  box-shadow: -2px 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 /* ===========================
    RESPONSIVE
    =========================== */
 @media (max-width: 768px) {
-  .g5ai-fab {
-    bottom: 90px;
-    right: 16px;
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
-  }
-
   .g5ai-popup {
-    bottom: 80px;
     right: 8px;
     left: 8px;
     width: auto;
-    height: calc(100vh - 160px);
+    height: calc(100vh - 100px);
     max-height: none;
     border-radius: 18px;
   }
 }
 
 @media (max-width: 480px) {
-  .g5ai-fab {
-    bottom: 80px;
-    right: 12px;
-    width: 48px;
-    height: 48px;
-    font-size: 18px;
-  }
-
   .g5ai-popup {
-    bottom: 72px;
     right: 0;
     left: 0;
     width: 100%;
-    height: calc(100vh - 130px);
+    height: calc(100vh - 80px);
     max-height: none;
     border-radius: 18px 18px 0 0;
   }

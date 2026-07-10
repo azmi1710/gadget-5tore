@@ -882,9 +882,9 @@
       injectSidebarItem();
       ensureInboxStable();
 
-      // Hide G5A FAB when chat panel is active (avoid overlap)
+      // Hide G5 AI FAB when chat panel is active (avoid overlap)
       var isChatPanel = state && state.admin && state.admin.panel === 'chat';
-      var g5Fab = $('g5aFab');
+      var g5Fab = document.querySelector('#g5aiFab');
       if (g5Fab) g5Fab.style.display = isChatPanel ? 'none' : '';
 
       if (isChatPanel) {
@@ -1810,7 +1810,6 @@
         if (ctx.isOpen) closeCustomerPopup();
         origDoLogout.apply(this, arguments);
         setTimeout(function () {
-          // Setelah logout, currentUser sudah hilang, tampilkan FAB lagi
           showCustomerFab();
         }, 300);
       };
