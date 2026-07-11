@@ -355,6 +355,7 @@
       + '<button class="lc-header-close" onclick="window.__lcToggle()"><i data-lucide="x"></i></button>'
       + '</div>'
       + '<div class="lc-messages" id="lcMessages"></div>'
+      + '<div class="lc-reply-indicator" id="lcReplyIndicator"></div>'
       + '<div class="lc-input-area">'
       + '<textarea class="lc-input" id="lcInput" placeholder="Ketik pesan..." rows="1"></textarea>'
       + '<button class="lc-send" id="lcSendBtn" title="Kirim"><i data-lucide="send"></i></button>'
@@ -481,12 +482,78 @@
       + '</div>';
   }
 
+  // ── Reply Time Indicator ────────────────────────
+  function updateReplyIndicator() {
+    var el = $('lcReplyIndicator');
+    if (!el) return;
+
+    // Hide when there are messages (not in welcome state)
+    if (ctx.messages.length > 0) {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'flex';
+
+    // Check if any admin is online via presence
+    var isOnline = false;
+    try {
+      if (window.__presenceState && window.__presenceState.admins && window.__presenceState.admins.length > 0) {
+        isOnline = true;
+      }
+    } catch (e) { /* ignore */ }
+
+    if (isOnline) {
+      el.innerHTML = '<span class="lc-reply-indicator-dot online"></span> Admin sedang online · Biasanya membalas dalam hitungan menit';
+    } else {
+      el.innerHTML = '<span class="lc-reply-indicator-dot offline"></span> Admin sedang offline · Pesan akan dijawab oleh AI';
+    }
+  }
+
   function renderCustomerMessages() {
     var el = $('lcMessages');
     if (!el) return;
 
     if (!ctx.messages.length) {
-      el.innerHTML = '<div class="lc-pill lc-pill--info"><i data-lucide="message-circle" class="lc-pill-icon"></i><span class="lc-pill-text">Percakapan dimulai. Silakan kirim pesan!</span></div>';
+      var name = esc(ctx.customerName || 'kamu');
+      var chips = [
+        { icon: 'package-search', label: 'Tanya Stok Produk' },
+        { icon: 'tag', label: 'Cek Harga' },
+        { icon: 'shield-check', label: 'Info Garansi' },
+        { icon: 'headphones', label: 'Hubungin Admin' },
+      ];
+      var chipsHtml = chips.map(function (c, i) {
+        return '<button class="lc-quick-chip" data-q="' + c.label + '">'
+          + '<i data-lucide="' + c.icon + '"></i> ' + c.label
+          + '</button>';
+      }).join('');
+
+      el.innerHTML = '<div class="lc-welcome">'
+        + '<div class="lc-welcome-avatar"><i data-lucide="message-circle-heart"></i></div>'
+        + '<div class="lc-welcome-text">Hai <strong>' + name + '</strong>! Ada yang bisa kami bantu? Tanya tentang produk, stok, atau harga aja ya.</div>'
+        + '<div class="lc-quick-chips" id="lcQuickChips">' + chipsHtml + '</div>'
+        + '</div>'
+        + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
+
+      // Bind chip clicks
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      var chipContainer = document.getElementById('lcQuickChips');
+      if (chipContainer) {
+        chipContainer.addEventListener('click', function (e) {
+          var chip = e.target.closest('.lc-quick-chip');
+          if (!chip) return;
+          var q = chip.getAttribute('data-q');
+          if (q) {
+            var inp = $('lcInput');
+            if (inp) {
+              inp.value = q;
+              inp.style.height = 'auto';
+              inp.style.height = Math.min(inp.scrollHeight, 100) + 'px';
+              sendCustomerMessage();
+            }
+          }
+        });
+      }
+      updateReplyIndicator();
       return;
     }
 
@@ -535,6 +602,7 @@
     + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
 
     el.scrollTop = el.scrollHeight;
+    updateReplyIndicator();
   }
 
   async function sendCustomerMessage() {

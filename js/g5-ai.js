@@ -156,10 +156,11 @@
 
   // ── Draggable FAB ─────────────────────────────
   var DRAG_THRESHOLD = 6; // px — di bawah ini dianggap klik
-  var EDGE_HIDE_RATIO = 0.55; // 55% FAB tersembunyi di balik edge
-  var IDLE_BEFORE_HIDE = 3000; // 3 detik idle sebelum nempel ke edge
+  var IDLE_BEFORE_SHRINK = 3000; // 3 detik idle sebelum shrink ke mini-dot
   var POS_KEY = 'g5ai_fab_pos'; // localStorage key untuk posisi
-  var edgeIdleTimer = null;
+  var shrinkTimer = null;
+  var DOT_SIZE = 22; // mini-dot diameter (desktop)
+  var FULL_SIZE = 56; // normal FAB diameter (desktop)
 
   function saveFabPos() {
     try {
@@ -220,22 +221,22 @@
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
 
-    // Hover: slide out dari edge
+    // Hover: expand dari mini-dot
     fab.addEventListener('mouseenter', function () {
-      if (fab.classList.contains('edge-hidden')) {
-        slideOutFromEdge();
-        resetIdleTimer();
+      if (fab.classList.contains('mini-dot')) {
+        expandFromDot();
+        cancelShrink();
       }
     });
     fab.addEventListener('mouseleave', function () {
       if (!ctx.isOpen && !ctx.drag.active) {
-        scheduleEdgeHide();
+        scheduleShrink();
       }
     });
 
-    // Hide ke edge setelah animasi masuk
+    // Shrink ke mini-dot setelah animasi masuk
     setTimeout(function () {
-      if (!ctx.isOpen) hideToEdge();
+      if (!ctx.isOpen) shrinkToDot();
     }, 600);
   }
 
@@ -247,14 +248,14 @@
   }
 
   function onDragStart(e) {
-    // Kalau lagi edge-hidden, slide out lalu langsung buka popup
-    if (ctx.fabEl.classList.contains('edge-hidden')) {
-      slideOutFromEdge();
-      cancelEdgeHide();
-      // Langsung buka popup setelah slide out selesai (~350ms)
+    // Kalau lagi mini-dot, expand dulu lalu langsung buka popup
+    if (ctx.fabEl.classList.contains('mini-dot')) {
+      expandFromDot();
+      cancelShrink();
+      // Langsung buka popup setelah expand selesai (~280ms)
       setTimeout(function () {
         if (!ctx.isOpen) openPopup();
-      }, 360);
+      }, 300);
       return;
     }
 
@@ -271,7 +272,7 @@
     ctx.drag.fabH = rect.height;
     ctx.drag.active = true;
 
-    cancelEdgeHide();
+    cancelShrink();
     e.preventDefault();
   }
 
@@ -288,7 +289,7 @@
 
     var fab = ctx.fabEl;
     fab.classList.add('dragging');
-    fab.classList.remove('edge-hidden');
+    fab.classList.remove('mini-dot');
 
     var newX = pos.x - ctx.drag.offsetX;
     var newY = pos.y - ctx.drag.offsetY;
@@ -330,9 +331,9 @@
     // Snap ke edge kiri/kanan
     snapToEdge();
     saveFabPos();
-    // Setelah snap, hide ke edge setelah delay
+    // Setelah snap, shrink ke mini-dot setelah delay
     if (!ctx.isOpen) {
-      setTimeout(hideToEdge, 800);
+      setTimeout(shrinkToDot, 800);
     }
   }
 
@@ -373,68 +374,109 @@
     }
   }
 
-  // ── Edge Hiding ──────────────────────────────────
-  function hideToEdge() {
+  // ── Mini-Dot Shrink / Expand ─────────────────
+  function getFabFullSize() {
+    // Match CSS responsive values
+    var vw = window.innerWidth;
+    if (vw <= 480) return 48;
+    if (vw <= 768) return 50;
+    return FULL_SIZE;
+  }
+
+  function getFabDotSize() {
+    // No dot on mobile
+    var vw = window.innerWidth;
+    if (vw <= 768) return getFabFullSize();
+    return DOT_SIZE;
+  }
+
+  function shrinkToDot() {
     if (ctx.isOpen || ctx.drag.active) return;
     var fab = ctx.fabEl;
     if (!fab) return;
+    // Don't shrink on mobile/tablet
+    if (window.innerWidth <= 768) return;
 
     var isLeft = fab.classList.contains('snapped-left');
-    var hideX;
+    var margin = 12;
+    var dotSize = DOT_SIZE;
+    var fullSize = FULL_SIZE;
+    var sizeDiff = fullSize - dotSize;
 
+    // Adjust position so the dot stays at the same visual edge alignment
+    var newX;
     if (isLeft) {
-      // Sembunyikan ke kiri — geser keluar layar kiri
-      hideX = -(ctx.drag.fabW * EDGE_HIDE_RATIO);
+      newX = margin;
     } else {
-      // Sembunyikan ke kanan — geser keluar layar kanan
-      hideX = window.innerWidth - ctx.drag.fabW * (1 - EDGE_HIDE_RATIO);
+      newX = window.innerWidth - dotSize - margin;
     }
 
-    ctx.drag.fabX = hideX;
-    fab.style.transition = 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-    fab.style.left = hideX + 'px';
-    fab.classList.add('edge-hidden');
+    // Adjust Y to keep vertically centered at same spot
+    var newY = ctx.drag.fabY + (sizeDiff / 2);
+    newY = Math.max(margin, Math.min(newY, window.innerHeight - dotSize - margin));
 
-    setTimeout(function () {
-      fab.style.transition = '';
-    }, 420);
-  }
+    ctx.drag.fabX = newX;
+    ctx.drag.fabY = newY;
 
-  function slideOutFromEdge() {
-    var fab = ctx.fabEl;
-    if (!fab || !fab.classList.contains('edge-hidden')) return;
-
-    var isLeft = fab.classList.contains('snapped-left');
-    var vw = window.innerWidth;
-    var margin = 12;
-    var snapX = isLeft ? margin : (vw - ctx.drag.fabW - margin);
-
-    ctx.drag.fabX = snapX;
-    fab.style.transition = 'left 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
-    fab.style.left = snapX + 'px';
-    fab.classList.remove('edge-hidden');
+    fab.style.transition = 'left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+    fab.style.left = newX + 'px';
+    fab.style.top = newY + 'px';
+    fab.classList.add('mini-dot');
 
     setTimeout(function () {
       fab.style.transition = '';
     }, 380);
   }
 
-  function scheduleEdgeHide() {
-    cancelEdgeHide();
-    edgeIdleTimer = setTimeout(function () {
-      hideToEdge();
-    }, IDLE_BEFORE_HIDE);
-  }
+  function expandFromDot() {
+    var fab = ctx.fabEl;
+    if (!fab || !fab.classList.contains('mini-dot')) return;
 
-  function cancelEdgeHide() {
-    if (edgeIdleTimer) {
-      clearTimeout(edgeIdleTimer);
-      edgeIdleTimer = null;
+    var isLeft = fab.classList.contains('snapped-left');
+    var margin = 12;
+    var fullSize = FULL_SIZE;
+    var dotSize = DOT_SIZE;
+    var sizeDiff = fullSize - dotSize;
+
+    // Restore to full-size position at the same edge
+    var newX;
+    if (isLeft) {
+      newX = margin;
+    } else {
+      newX = window.innerWidth - fullSize - margin;
     }
+
+    // Restore Y (shift back up by half the size difference)
+    var newY = ctx.drag.fabY - (sizeDiff / 2);
+    newY = Math.max(margin, Math.min(newY, window.innerHeight - fullSize - margin));
+
+    ctx.drag.fabX = newX;
+    ctx.drag.fabY = newY;
+    ctx.drag.fabW = fullSize;
+    ctx.drag.fabH = fullSize;
+
+    fab.style.transition = 'left 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1), top 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1)';
+    fab.style.left = newX + 'px';
+    fab.style.top = newY + 'px';
+    fab.classList.remove('mini-dot');
+
+    setTimeout(function () {
+      fab.style.transition = '';
+    }, 320);
   }
 
-  function resetIdleTimer() {
-    cancelEdgeHide();
+  function scheduleShrink() {
+    cancelShrink();
+    shrinkTimer = setTimeout(function () {
+      shrinkToDot();
+    }, IDLE_BEFORE_SHRINK);
+  }
+
+  function cancelShrink() {
+    if (shrinkTimer) {
+      clearTimeout(shrinkTimer);
+      shrinkTimer = null;
+    }
   }
 
   // ── Popup Positioning ──────────────────────────
@@ -633,9 +675,9 @@
   }
 
   function openPopup() {
-    // Pastikan FAB keluar dari edge dulu
-    slideOutFromEdge();
-    cancelEdgeHide();
+    // Pastikan FAB expand dari mini-dot dulu
+    expandFromDot();
+    cancelShrink();
 
     ctx.isOpen = true;
     ctx.popupEl.style.display = 'flex';
@@ -678,8 +720,8 @@
       ctx.popupEl.style.display = 'none';
       ctx.popupEl.classList.remove('closing');
       ctx.isOpen = false;
-      // Setelah tutup, hide FAB ke edge
-      scheduleEdgeHide();
+      // Setelah tutup, shrink FAB ke mini-dot
+      scheduleShrink();
     }, 250);
   }
 
@@ -702,23 +744,24 @@
     if (!ctx.messages.length) { renderWelcome(); return; }
 
     var html = ctx.messages.map(function (m, idx) {
-  var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
-  if (m.role === 'system') cls = 'g5ai-msg--system';
-  // FIX: Hanya pesan terakhir yang dapat animasi (--new), cegah overlap
-  var isNew = idx === ctx.messages.length - 1;
-  var content = m.role === 'bot' && typeof marked !== 'undefined'
-    ? marked.parse(m.text)
-    : esc(m.text);
-  return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + '">'
-    + content
-    + '<span class="g5ai-msg-time">' + m.time + '</span>'
-    + '</div>';
-}).join('');
+      var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
+      if (m.role === 'system') cls = 'g5ai-msg--system';
+      var isNew = idx === ctx.messages.length - 1;
+      var content = m.role === 'bot' && typeof marked !== 'undefined'
+        ? marked.parse(m.text)
+        : esc(m.text);
+
+      return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + '">'
+        + content
+        + '<span class="g5ai-msg-time">' + m.time + '</span>'
+        + '</div>';
+    }).join('');
 
     // Add typing indicator placeholder
     html += '<div class="g5ai-typing" id="g5aiTyping"><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div></div>';
 
     el.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     el.scrollTop = el.scrollHeight;
   }
 
@@ -844,18 +887,6 @@
         reply = data.response;
       } else {
         reply = JSON.stringify(data);
-      }
-
-      // Cleanup: kalau reply masih berisi JSON mentah di awal, extract reply-nya aja
-      if (reply && typeof reply === 'string' && reply.trim().startsWith('{')) {
-        try {
-          var parsed = JSON.parse(reply);
-          if (parsed.reply) reply = parsed.reply;
-        } catch (e) { /* bukan JSON valid, biarin apa adanya */ }
-      }
-      // Cleanup: kalau reply mengandung blok JSON di awal sebelum teks asli
-      if (reply && typeof reply === 'string') {
-        reply = reply.replace(/^\s*\{[\s\S]*?\}\s*\n*/, '').trim();
       }
 
       ctx.messages.push({ role: 'bot', text: reply, time: timeStr() });

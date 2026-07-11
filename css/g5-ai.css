@@ -23,7 +23,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* width/height transition handled by .mini-dot below */
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+              background 0.25s ease,
+              opacity 0.25s ease;
   z-index: 10001;
   animation: g5aiFabIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
@@ -53,11 +57,40 @@
 }
 
 .g5ai-fab .g5ai-fab-icon {
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, opacity 0.2s ease;
 }
 
 .g5ai-fab.open .g5ai-fab-icon {
   transform: none;
+}
+
+/* ── Mini Dot State (idle) ── */
+.g5ai-fab.mini-dot {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0 !important;
+  box-shadow: 0 2px 10px rgba(0, 122, 255, 0.25), 0 0 0 0 rgba(0, 122, 255, 0);
+  animation: g5aiDotPulse 2.5s ease-in-out infinite !important;
+  cursor: pointer;
+}
+
+.g5ai-fab.mini-dot .g5ai-fab-icon {
+  opacity: 0;
+  transform: scale(0);
+}
+
+.g5ai-fab.mini-dot:hover {
+  animation: none !important;
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35), 0 0 0 0 rgba(0, 122, 255, 0);
+}
+
+@keyframes g5aiDotPulse {
+  0%, 100% {
+    box-shadow: 0 2px 10px rgba(0, 122, 255, 0.25), 0 0 0 0 rgba(0, 122, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 10px rgba(0, 122, 255, 0.25), 0 0 0 6px rgba(0, 122, 255, 0);
+  }
 }
 
 .g5ai-fab-badge {
@@ -78,6 +111,11 @@
   display: none;
   animation: g5aiBadgePop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   box-shadow: 0 2px 6px rgba(255, 59, 48, 0.35);
+}
+
+/* Hide badge in mini-dot mode */
+.g5ai-fab.mini-dot .g5ai-fab-badge {
+  display: none !important;
 }
 
 @keyframes g5aiBadgePop {
@@ -561,6 +599,131 @@ body.dark .g5ai-msg hr {
   text-align: center;
 }
 
+/* --- Copy Button on Bot Messages --- */
+.g5ai-msg--bot {
+  position: relative;
+}
+
+.g5ai-msg-copy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #8E8E93;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0s, color 0s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  z-index: 2;
+}
+
+.g5ai-msg--bot:hover .g5ai-msg-copy {
+  opacity: 1;
+}
+
+/* Always show on touch devices */
+@media (hover: none) {
+  .g5ai-msg-copy { opacity: 0.5; }
+}
+
+.g5ai-msg-copy:hover {
+  background: rgba(60, 60, 67, 0.08);
+  color: #1C1C1E;
+}
+
+.g5ai-msg-copy:active {
+  background: rgba(60, 60, 67, 0.12);
+}
+
+.g5ai-msg-copy.copied {
+  color: #34C759;
+  opacity: 1;
+}
+
+/* --- Follow-up Questions --- */
+.g5ai-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 6px;
+  align-self: flex-start;
+  max-width: 80%;
+  animation: g5aiMsgIn 0.25s ease-out;
+}
+
+.g5ai-followup-chip {
+  padding: 5px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 122, 255, 0.2);
+  background: #FFFFFF;
+  color: #007AFF;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: -apple-system, 'SF Pro Text', 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background 0s, color 0s, transform 0s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.g5ai-followup-chip:hover {
+  background: rgba(0, 122, 255, 0.06);
+  transform: scale(1.02);
+}
+
+.g5ai-followup-chip:active {
+  background: rgba(0, 122, 255, 0.1);
+  transform: scale(0.97);
+}
+
+.g5ai-followup-chip svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Dark mode: copy button */
+body.dark .g5ai-msg-copy {
+  color: rgba(255, 255, 255, 0.3);
+}
+body.dark .g5ai-msg--bot:hover .g5ai-msg-copy {
+  opacity: 1;
+}
+body.dark .g5ai-msg-copy:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #F2F2F7;
+}
+body.dark .g5ai-msg-copy.copied {
+  color: #30D158;
+  opacity: 1;
+}
+
+/* Dark mode: follow-up chips */
+body.dark .g5ai-followup-chip {
+  background: #2C2C2E;
+  border-color: rgba(10, 132, 255, 0.25);
+  color: #0A84FF;
+}
+body.dark .g5ai-followup-chip:hover {
+  background: rgba(10, 132, 255, 0.1);
+}
+
 /* --- Scrollable table inside bubble --- */
 .g5ai-msg table {
   display: block;
@@ -972,6 +1135,24 @@ body.dark .g5ai-fab {
     0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
+body.dark .g5ai-fab.mini-dot {
+  background: #0A84FF;
+  box-shadow: 0 2px 10px rgba(10, 132, 255, 0.3), 0 0 0 0 rgba(10, 132, 255, 0);
+}
+
+@keyframes g5aiDotPulseDark {
+  0%, 100% {
+    box-shadow: 0 2px 10px rgba(10, 132, 255, 0.3), 0 0 0 0 rgba(10, 132, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 10px rgba(10, 132, 255, 0.3), 0 0 0 6px rgba(10, 132, 255, 0);
+  }
+}
+
+body.dark .g5ai-fab.mini-dot {
+  animation-name: g5aiDotPulseDark !important;
+}
+
 /* ===========================
    RESPONSIVE
    =========================== */
@@ -982,6 +1163,21 @@ body.dark .g5ai-fab {
     width: 50px;
     height: 50px;
     font-size: 20px;
+  }
+
+  /* No mini-dot on tablet/mobile — FAB stays full size */
+  .g5ai-fab.mini-dot {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 20px !important;
+    box-shadow:
+      0 4px 16px rgba(0, 122, 255, 0.3),
+      0 1px 4px rgba(0, 0, 0, 0.08) !important;
+    animation: none !important;
+  }
+  .g5ai-fab.mini-dot .g5ai-fab-icon {
+    opacity: 1 !important;
+    transform: none !important;
   }
 
   .g5ai-popup {
@@ -1002,6 +1198,12 @@ body.dark .g5ai-fab {
     width: 48px;
     height: 48px;
     font-size: 18px;
+  }
+
+  .g5ai-fab.mini-dot {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 18px !important;
   }
 
   .g5ai-popup {
