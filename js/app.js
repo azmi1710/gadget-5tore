@@ -1498,7 +1498,14 @@ function renderCatalog() {
   const activePromos = (state.db.promos || []).filter((p) => p.active);
   if (activePromos.length && ps) {
     ps.style.display = '';
-    ps.innerHTML = `<div class="promo-slider"><button class="promo-slider-btn prev" id="promoPrev"><i data-lucide="chevron-left"></i></button><button class="promo-slider-btn next" id="promoNext"><i data-lucide="chevron-right"></i></button><div class="promo-slider-track" id="promoSliderTrack">${activePromos.map((p, i) => `<div class="promo-slide" style="${p.image ? `background-image:url('${esc(p.image)}')` : 'background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)'}"><div class="promo-slide-body"><h3>${esc(p.title)}</h3><p>${esc(p.description || '')}</p></div></div>`).join('')}</div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
+    const badgeIcons = ['zap', 'flame', 'gift', 'sparkles', 'percent', 'tag'];
+    ps.innerHTML = `<div class="promo-slider"><button class="promo-slider-btn prev" id="promoPrev"><i data-lucide="chevron-left"></i></button><button class="promo-slider-btn next" id="promoNext"><i data-lucide="chevron-right"></i></button><div class="promo-slider-track" id="promoSliderTrack">${activePromos.map((p, i) => {
+      const hasBg = !!p.image;
+      const grad = hasBg ? '' : ` promo-grad-${i % 4}`;
+      const bgStyle = hasBg ? `background-image:url('${esc(p.image)}')` : '';
+      const badgeIcon = badgeIcons[i % badgeIcons.length];
+      return `<div class="promo-slide${grad}" style="${bgStyle}" data-idx="${i}"><div class="promo-slide-body"><div class="promo-slide-badge"><i data-lucide="${badgeIcon}"></i> Promo</div><h3>${esc(p.title)}</h3>${p.description ? `<p>${esc(p.description)}</p>` : ''}<button class="promo-slide-cta" data-promo-idx="${i}">Lihat Detail <i data-lucide="arrow-right"></i></button></div></div>`;
+    }).join('')}</div><div class="promo-slider-counter"><span class="cur" id="promoCounterCur">01</span> / <span id="promoCounterTotal">${String(activePromos.length).padStart(2, '0')}</span></div><div class="promo-slider-progress"><div class="promo-slider-progress-bar" id="promoProgressBar"></div></div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
     setTimeout(initPromoSlider, 100);
   } else if (ps) { ps.style.display = 'none'; }
   const exploreEl = document.getElementById('exploreSection');
@@ -3650,16 +3657,119 @@ function toggleFilterPanel() {
   }
 }
 /* ── Promo Slider ── */
-let _psTimer = null, _psIdx = 0;
+let _psTimer = null, _psIdx = 0, _psProgressRAF = null, _psProgressStart = 0;
+const _psInterval = 5000;
 function initPromoSlider() {
   const slides = document.querySelectorAll('.promo-slide'), track = document.getElementById('promoSliderTrack'), dots = document.querySelectorAll('.promo-slider-dot');
-  if (!slides.length || slides.length <= 1) return;
-  const go = (i) => { _psIdx = (i + slides.length) % slides.length; track.style.transform = `translateX(-${_psIdx * 100}%)`; dots.forEach((d, j) => d.classList.toggle('active', j === _psIdx)); };
-  const reset = () => { clearInterval(_psTimer); _psTimer = setInterval(() => go(_psIdx + 1), 4000); };
+  const counterCur = document.getElementById('promoCounterCur');
+  const progressBar = document.getElementById('promoProgressBar');
+  if (!slides.length) return;
+
+  const total = slides.length;
+
+  const go = (i) => {
+    _psIdx = (i + total) % total;
+    track.style.transform = `translateX(-${_psIdx * 100}%)`;
+    dots.forEach((d, j) => d.classList.toggle('active', j === _psIdx));
+    if (counterCur) counterCur.textContent = String(_psIdx + 1).padStart(2, '0');
+    // Animate slide content in
+    const activeBody = slides[_psIdx].querySelector('.promo-slide-body');
+    if (activeBody) {
+      activeBody.style.opacity = '0';
+      activeBody.style.transform = 'translateY(12px)';
+      requestAnimationFrame(() => {
+        activeBody.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+        activeBody.style.opacity = '1';
+        activeBody.style.transform = 'translateY(0)';
+      });
+    }
+  };
+
+  // Progress bar
+  function startProgress() {
+    _psProgressStart = performance.now();
+    if (progressBar) progressBar.style.width = '0%';
+    cancelAnimationFrame(_psProgressRAF);
+    function tick(now) {
+      const elapsed = now - _psProgressStart;
+      const pct = Math.min((elapsed / _psInterval) * 100, 100);
+      if (progressBar) progressBar.style.width = pct + '%';
+      if (elapsed < _psInterval) {
+        _psProgressRAF = requestAnimationFrame(tick);
+      }
+    }
+    _psProgressRAF = requestAnimationFrame(tick);
+  }
+
+  const reset = () => {
+    clearInterval(_psTimer);
+    cancelAnimationFrame(_psProgressRAF);
+    go(_psIdx);
+    startProgress();
+    _psTimer = setInterval(() => { go(_psIdx + 1); startProgress(); }, _psInterval);
+  };
+
   document.getElementById('promoPrev')?.addEventListener('click', () => { go(_psIdx - 1); reset(); });
   document.getElementById('promoNext')?.addEventListener('click', () => { go(_psIdx + 1); reset(); });
   dots.forEach(d => d.addEventListener('click', () => { go(parseInt(d.dataset.idx)); reset(); }));
-  reset();
+
+  // Swipe support
+  let swStartX = 0, swStartY = 0, swDragging = false;
+  const sliderEl = document.querySelector('.promo-slider');
+  if (sliderEl) {
+    sliderEl.addEventListener('touchstart', (e) => {
+      swStartX = e.touches[0].clientX;
+      swStartY = e.touches[0].clientY;
+      swDragging = true;
+      track.style.transition = 'none';
+    }, { passive: true });
+    sliderEl.addEventListener('touchmove', (e) => {
+      if (!swDragging) return;
+      const dx = e.touches[0].clientX - swStartX;
+      const dy = e.touches[0].clientY - swStartY;
+      if (Math.abs(dy) > Math.abs(dx)) { swDragging = false; return; }
+      const offset = -(_psIdx * 100) + (dx / sliderEl.offsetWidth) * 100;
+      track.style.transform = `translateX(${offset}%)`;
+    }, { passive: true });
+    sliderEl.addEventListener('touchend', (e) => {
+      if (!swDragging) return;
+      swDragging = false;
+      track.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)';
+      const dx = e.changedTouches[0].clientX - swStartX;
+      if (Math.abs(dx) > 50) {
+        go(dx < 0 ? _psIdx + 1 : _psIdx - 1);
+      } else {
+        go(_psIdx);
+      }
+      reset();
+    }, { passive: true });
+  }
+
+  // CTA buttons — scroll to promo section or show toast
+  document.querySelectorAll('.promo-slide-cta').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.promoIdx);
+      const promo = (state.db.promos || []).filter(p => p.active)[idx];
+      if (promo) toast(promo.title, 'info');
+    });
+  });
+
+  if (slides.length > 1) {
+    reset();
+  } else {
+    go(0);
+    // Hide nav buttons & counter if only 1 slide
+    const prev = document.getElementById('promoPrev');
+    const next = document.getElementById('promoNext');
+    const counter = document.querySelector('.promo-slider-counter');
+    const dotsEl = document.querySelector('.promo-slider-dots');
+    if (prev) prev.style.display = 'none';
+    if (next) next.style.display = 'none';
+    if (counter) counter.style.display = 'none';
+    if (dotsEl) dotsEl.style.display = 'none';
+    if (progressBar) progressBar.parentElement.style.display = 'none';
+  }
 }
 function toggleTheme() {
   document.body.classList.toggle('dark');

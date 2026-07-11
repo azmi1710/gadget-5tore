@@ -19,8 +19,38 @@
   <link rel="stylesheet" href="css/presence.css">
   <link rel="stylesheet" href="css/live-chat.css?v=20260710e">
   <link rel="stylesheet" href="css/g5-ai.css?v=20260710i">
+  <link rel="stylesheet" href="css/intro-overlay.css?v=20260712">
 </head>
 <body>
+<!-- Intro Overlay -->
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-bg"></div>
+  <div class="intro-glow"></div>
+  <div class="intro-glow-2"></div>
+  <div class="intro-content">
+    <div class="intro-icon" aria-label="G5">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="ig" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#D9503F"/><stop offset="100%" stop-color="#C8A44E"/></linearGradient></defs>
+        <rect width="100" height="100" rx="20" fill="url(#ig)"/>
+        <text x="50" y="73" text-anchor="middle" font-family="system-ui,sans-serif" font-size="60" font-weight="900" fill="white">5</text>
+      </svg>
+    </div>
+    <div class="intro-logo">Gadget <span class="fv">5</span>tore</div>
+    <p class="intro-tagline">Pusat gadget original terlengkap. Harga terbaik, garansi resmi, pengiriman cepat.</p>
+    <div class="intro-trust">
+      <span class="intro-trust-item"><i data-lucide="shield-check"></i> Original</span>
+      <span class="intro-trust-item"><i data-lucide="award"></i> Garansi Resmi</span>
+      <span class="intro-trust-item"><i data-lucide="truck"></i> Kirim Cepat</span>
+    </div>
+    <button class="intro-cta" id="introCta">Jelajahi Toko</button>
+  </div>
+  <button class="intro-skip" id="introSkip">Lewati</button>
+  <div class="intro-scroll-hint">
+    <div class="intro-scroll-mouse"></div>
+    <span class="intro-scroll-text">Scroll</span>
+  </div>
+</div>
+
 <noscript>
   <div style="padding:40px;text-align:center;font-family:sans-serif;">
     <h2>JavaScript Diperlukan</h2>
@@ -394,5 +424,49 @@ window.addEventListener('scroll', () => {
 <script src="js/live-chat.js?v=20260711lucide"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="js/g5-ai.js?v=20260711lucide"></script>
+<script>
+// ── Intro Overlay ──
+(function(){
+  var intro = document.getElementById('introOverlay');
+  if (!intro) return;
+
+  // Cek session — skip kalau udah pernah lihat
+  var INTRO_KEY = 'g5_intro_seen';
+  var skip = sessionStorage.getItem(INTRO_KEY) === '1';
+
+  function dismissIntro() {
+    sessionStorage.setItem(INTRO_KEY, '1');
+    intro.classList.add('hide');
+    setTimeout(function(){
+      intro.remove();
+    }, 700);
+  }
+
+  if (skip) {
+    // Langsung hilangin tanpa animasi
+    intro.remove();
+    return;
+  }
+
+  // Render lucide icons di intro
+  if (window.lucide) lucide.createIcons();
+
+  // CTA & Skip buttons
+  document.getElementById('introCta').addEventListener('click', dismissIntro);
+  document.getElementById('introSkip').addEventListener('click', dismissIntro);
+
+  // Scroll / wheel juga dismiss
+  var dismissed = false;
+  function onScroll(e) {
+    if (dismissed) return;
+    dismissed = true;
+    dismissIntro();
+    window.removeEventListener('wheel', onScroll, { passive: true });
+    window.removeEventListener('touchmove', onScroll, { passive: true });
+  }
+  window.addEventListener('wheel', onScroll, { passive: true });
+  window.addEventListener('touchmove', onScroll, { passive: true });
+})();
+</script>
 </body>
 </html>
