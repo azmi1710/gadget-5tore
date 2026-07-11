@@ -739,6 +739,24 @@
       + '</div>';
   }
 
+  function copyBotMsg(btn) {
+    var msgEl = btn.closest('.g5ai-msg--bot');
+    if (!msgEl) return;
+    var text = msgEl.textContent || msgEl.innerText || '';
+    text = text.replace(/\d{1,2}:\d{2}\s*$/, '').trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function () {
+      btn.innerHTML = '<i data-lucide="check"></i>';
+      btn.classList.add('copied');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      setTimeout(function () {
+        btn.innerHTML = '<i data-lucide="copy"></i>';
+        btn.classList.remove('copied');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }, 1500);
+    });
+  }
+
   function renderMessages() {
     var el = $('g5aiMessages');
     if (!ctx.messages.length) { renderWelcome(); return; }
@@ -751,10 +769,28 @@
         ? marked.parse(m.text)
         : esc(m.text);
 
+      // Copy button for bot messages
+      var copyBtn = '';
+      if (m.role === 'bot') {
+        copyBtn = '<button class="g5ai-msg-copy" onclick="window.__g5aiCopy(this)" title="Salin"><i data-lucide="copy"></i></button>';
+      }
+
+      // Follow-up questions after bot message
+      var followupsHtml = '';
+      if (m.role === 'bot' && m.followups && m.followups.length) {
+        var chips = m.followups.map(function (q) {
+          return '<button class="g5ai-followup-chip" onclick="window.__g5aiSend(\'' + esc(q).replace(/'/g, "\\'") + '\')">'
+            + '<i data-lucide="arrow-up-right"></i> ' + esc(q) + '</button>';
+        }).join('');
+        followupsHtml = '<div class="g5ai-followups">' + chips + '</div>';
+      }
+
       return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + '">'
+        + copyBtn
         + content
         + '<span class="g5ai-msg-time">' + m.time + '</span>'
-        + '</div>';
+        + '</div>'
+        + followupsHtml;
     }).join('');
 
     // Add typing indicator placeholder
@@ -889,7 +925,15 @@
         reply = JSON.stringify(data);
       }
 
-      ctx.messages.push({ role: 'bot', text: reply, time: timeStr() });
+      // Extract follow-up questions from response
+      var followups = [];
+      if (data && typeof data === 'object') {
+        followups = data.followups || data.suggestions || data.follow_up || [];
+        if (!Array.isArray(followups)) followups = [];
+        followups = followups.filter(function (f) { return typeof f === 'string' && f.trim(); }).slice(0, 3);
+      }
+
+      ctx.messages.push({ role: 'bot', text: reply, time: timeStr(), followups: followups });
       renderMessages();
     } catch (e) {
       showTyping(false);
@@ -990,6 +1034,10 @@ function showFabIfAllowed() {
    */
   window.__g5aiSend = function (text) {
     sendMessage(text);
+  };
+
+  window.__g5aiCopy = function (btn) {
+    copyBotMsg(btn);
   };
 
   // ── INIT ────────────────────────────────────────
