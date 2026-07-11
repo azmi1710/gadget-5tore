@@ -24,6 +24,8 @@
     pendingMessage: null,
     _typingChannel: null,
     _adminTypingTimer: null,
+    _customerTypingCh: null,
+    _customerTypingTimer: null,
 
     // Admin
     activeSessionId: null,
@@ -40,6 +42,8 @@
     // Admin typing broadcast
     adminTypingCh: null,
     _lastTypingSession: null,
+    _customerTypingCh: null,
+    _customerTypingTimer: null,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -363,6 +367,12 @@
     $('lcInput').oninput = function () {
       this.style.height = 'auto';
       this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+      // Broadcast typing to admin
+      if (ctx._typingChannel) {
+        try {
+          ctx._typingChannel.send({ type: 'broadcast', event: 'customer_typing', payload: {} });
+        } catch (e) { /* channel not ready */ }
+      }
     };
 
     // Pre-fill pending message dari tombol produk
@@ -1522,17 +1532,33 @@
 
     // Subscribe to typing broadcast channel for this session
     if (state && state.session && state.session.sb && ctx.activeTab !== 'history') {
-      // Cleanup previous typing channel if switching sessions
+      // Cleanup previous typing channels if switching sessions
       if (ctx.adminTypingCh && ctx._lastTypingSession !== sessionId) {
         try { ctx.adminTypingCh.unsubscribe(); } catch (e) { /* */ }
       }
+      if (ctx._customerTypingCh && ctx._lastTypingSession !== sessionId) {
+        try { ctx._customerTypingCh.unsubscribe(); } catch (e) { /* */ }
+      }
       if (!ctx.adminTypingCh || ctx._lastTypingSession !== sessionId) {
         var typingChName = 'lc-typing:' + sessionId;
-        ctx.adminTypingCh = state.session.sb.channel(typingChName).subscribe(function (status) {
-          if (status === 'SUBSCRIBED') {
-            console.log('[live-chat] admin typing channel subscribed for', sessionId);
-          }
-        });
+        ctx.adminTypingCh = state.session.sb.channel(typingChName)
+          .on('broadcast', { event: 'customer_typing' }, function () {
+            var typingEl = $('lcCustomerTyping');
+            if (typingEl) {
+              typingEl.classList.add('show');
+              var msgContainer = typingEl.parentElement;
+              if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+              clearTimeout(ctx._customerTypingTimer);
+              ctx._customerTypingTimer = setTimeout(function () {
+                if (typingEl) typingEl.classList.remove('show');
+              }, 2500);
+            }
+          })
+          .subscribe(function (status) {
+            if (status === 'SUBSCRIBED') {
+              console.log('[live-chat] admin typing channel subscribed for', sessionId);
+            }
+          });
         ctx._lastTypingSession = sessionId;
       }
     }
@@ -1571,7 +1597,9 @@
       + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + s.session_id + '\')" title="Hapus sesi"><i data-lucide="trash-2"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i data-lucide="x" style="margin-right:3px"></i>Tutup</button>')
       + '</div>'
       + '</div>'
-      + '<div class="lc-inbox-messages" id="lcAdminMessages"></div>'
+      + '<div class="lc-inbox-messages" id="lcAdminMessages">'
+      + '<div class="lc-typing" id="lcCustomerTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>'
+      + '</div>'
       + '<div class="lc-inbox-input-area">'
       + (isClosed
         ? '<textarea class="lc-inbox-input" disabled placeholder="Sesi telah ditutup" rows="1" style="opacity:0.5"></textarea>'
@@ -1860,6 +1888,10 @@
           if (!exists) {
             ctx.adminMessages[m.session_id].push(m);
             renderAdminMessages(m.session_id);
+            // Hide customer typing indicator when message arrives
+            var custTypingEl = $('lcCustomerTyping');
+            if (custTypingEl) custTypingEl.classList.remove('show');
+            clearTimeout(ctx._customerTypingTimer);
           }
         }
 
