@@ -238,8 +238,20 @@
     }
   }
 
+  function toggleCustomerMaximize() {
+    var popup = ctx.popupEl;
+    if (!popup) return;
+    var isMax = popup.classList.toggle('maximized');
+    // Update icon on both possible maximize buttons
+    document.querySelectorAll('.lc-header-maximize').forEach(function (btn) {
+      btn.innerHTML = isMax ? '<i data-lucide="minimize-2"></i>' : '<i data-lucide="maximize-2"></i>';
+    });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
   function closeCustomerPopup() {
     ctx.popupEl.classList.add('closing');
+    ctx.popupEl.classList.remove('maximized');
     ctx.fabEl.classList.remove('open');
     setTimeout(function () {
       ctx.popupEl.style.display = 'none';
@@ -257,6 +269,7 @@
       + '<div class="lc-header-name">Live Chat</div>'
       + '<div class="lc-header-status"><span class="lc-status-dot"></span> Kami siap membantu</div>'
       + '</div>'
+      + '<button class="lc-header-maximize" onclick="window.__lcMaximize()"><i data-lucide="maximize-2"></i></button>'
       + '<button class="lc-header-close" onclick="window.__lcToggle()"><i data-lucide="x"></i></button>'
       + '</div>'
       + '<div class="lc-form">'
@@ -334,6 +347,7 @@
       + '<div class="lc-header-name">Live Chat</div>'
       + '<div class="lc-header-status"><span class="lc-status-dot" id="lcStatusDot"></span> <span id="lcHeaderStatusText">Terhubung</span> <span class="lc-mode-badge lc-mode-badge--ai" id="lcModeBadge">\uD83E\uDD16 AI</span></div>'
       + '</div>'
+      + '<button class="lc-header-maximize" onclick="window.__lcMaximize()"><i data-lucide="maximize-2"></i></button>'
       + '<button class="lc-header-close" onclick="window.__lcToggle()"><i data-lucide="x"></i></button>'
       + '</div>'
       + '<div class="lc-messages" id="lcMessages"></div>'
@@ -986,11 +1000,11 @@
       injectSidebarItem();
       ensureInboxStable();
 
-      // Hide G5 AI FAB when chat panel is active (avoid overlap)
+      // Hide G5 AI FAB when chat panel is active (avoid overlap), show when not
       var isChatPanel = state && state.admin && state.admin.panel === 'chat';
       var g5Fab = document.querySelector('#g5aiFab');
       if (g5Fab) {
-        if (isChatPanel) g5Fab.style.display = 'none';
+        g5Fab.style.display = isChatPanel ? 'none' : '';
       }
 
       if (isChatPanel) {
@@ -1942,6 +1956,8 @@
   // ═══════════════════════════════════════════════════
 
   window.__lcToggle = function () { toggleCustomerPopup(); };
+
+  window.__lcMaximize = function () { toggleCustomerMaximize(); };
 
   window.__lcSelectSession = function (id) { selectSession(id); };
 

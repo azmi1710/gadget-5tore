@@ -186,8 +186,8 @@
 }
 
 .g5ai-header-clear {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -197,8 +197,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: background 0s, color 0s;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-header-clear:hover {
@@ -206,9 +209,14 @@
   color: #FF3B30;
 }
 
+.g5ai-header-clear:active {
+  background: rgba(60, 60, 67, 0.1);
+  color: #FF3B30;
+}
+
 .g5ai-header-close {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -218,8 +226,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: background 0s, color 0s;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-header-close:hover {
@@ -228,13 +239,13 @@
 }
 
 .g5ai-header-close:active {
-  transform: scale(0.92);
+  background: rgba(60, 60, 67, 0.1);
 }
 
-/* --- Demo Picker Button --- */
-.g5ai-header-demo {
-  width: 28px;
-  height: 28px;
+/* --- Maximize Button --- */
+.g5ai-header-maximize {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -244,8 +255,71 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: background 0s, color 0s;
   flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.g5ai-header-maximize:hover {
+  background: rgba(60, 60, 67, 0.06);
+  color: #1C1C1E;
+}
+
+.g5ai-header-maximize:active {
+  background: rgba(60, 60, 67, 0.1);
+}
+
+/* --- Popup Maximized State (desktop only) --- */
+.g5ai-popup.maximized {
+  width: 600px !important;
+  height: 700px !important;
+  max-height: calc(100vh - 60px) !important;
+}
+
+@media (max-width: 768px) {
+  .g5ai-header-maximize { display: none; }
+  .g5ai-popup.maximized {
+    width: auto !important;
+    height: calc(100vh - 160px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .g5ai-popup.maximized {
+    width: 100% !important;
+    height: calc(100vh - 130px) !important;
+  }
+}
+
+/* Dark mode maximize btn */
+body.dark .g5ai-header-maximize {
+  color: rgba(255, 255, 255, 0.4);
+}
+body.dark .g5ai-header-maximize:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #F2F2F7;
+}
+
+/* --- Demo Picker Button --- */
+.g5ai-header-demo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #8E8E93;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0s, color 0s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-header-demo:hover,
@@ -340,9 +414,12 @@
   font-family: -apple-system, 'SF Pro Text', 'Inter', sans-serif;
   color: #1C1C1E;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0s;
   line-height: 1.4;
   border-radius: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-demo-item:hover {
@@ -616,17 +693,18 @@ body.dark .g5ai-msg table th {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: background 0s;
   box-shadow: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-send:hover {
   background: #0066D6;
-  transform: scale(1.04);
 }
 
 .g5ai-send:active {
-  transform: scale(0.94);
   background: #0055B3;
 }
 
@@ -704,19 +782,21 @@ body.dark .g5ai-msg table th {
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0s, color 0s;
   font-family: -apple-system, 'SF Pro Text', 'Inter', sans-serif;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 0.5px 0 rgba(0, 0, 0, 0.04);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .g5ai-welcome-chip:hover {
   background: rgba(0, 122, 255, 0.08);
-  transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
 }
 
 .g5ai-welcome-chip:active {
-  transform: scale(0.97);
+  background: rgba(0, 122, 255, 0.12);
 }
 
 /* ===========================

@@ -247,9 +247,14 @@
   }
 
   function onDragStart(e) {
-    // Kalau lagi edge-hidden, slide out dulu
+    // Kalau lagi edge-hidden, slide out lalu langsung buka popup
     if (ctx.fabEl.classList.contains('edge-hidden')) {
       slideOutFromEdge();
+      cancelEdgeHide();
+      // Langsung buka popup setelah slide out selesai (~350ms)
+      setTimeout(function () {
+        if (!ctx.isOpen) openPopup();
+      }, 360);
       return;
     }
 
@@ -546,6 +551,7 @@
       + '</div>'
       + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i data-lucide="list-checks"></i></button>'
       + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i data-lucide="trash-2"></i></button>'
+      + '<button class="g5ai-header-maximize" id="g5aiMaxBtn" title="Perbesar"><i data-lucide="maximize-2"></i></button>'
       + '<button class="g5ai-header-close" id="g5aiCloseBtn" title="Tutup"><i data-lucide="x"></i></button>'
       + '</div>'
       + buildDemoPickerHTML()
@@ -559,6 +565,7 @@
 
     // Events
     $('g5aiCloseBtn').onclick = function () { closePopup(); };
+    $('g5aiMaxBtn').onclick = function () { toggleMaximize(); };
     $('g5aiSendBtn').onclick = function () { sendMessage(); };
     $('g5aiInput').onkeydown = function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -651,8 +658,20 @@
     }, 150);
   }
 
+  function toggleMaximize() {
+    var popup = ctx.popupEl;
+    if (!popup) return;
+    var isMax = popup.classList.toggle('maximized');
+    var btn = $('g5aiMaxBtn');
+    if (btn) btn.innerHTML = isMax ? '<i data-lucide="minimize-2"></i>' : '<i data-lucide="maximize-2"></i>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Re-position popup after size change
+    if (ctx.isOpen) setTimeout(positionPopup, 50);
+  }
+
   function closePopup() {
     closeDemoPicker();
+    ctx.popupEl.classList.remove('maximized');
     ctx.popupEl.classList.add('closing');
     ctx.fabEl.classList.remove('open');
     setTimeout(function () {
@@ -890,8 +909,6 @@
 function showFabIfAllowed() {
   var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
   if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
-  var g5aFab = document.querySelector('#g5aFab');
-  if (g5aFab) g5aFab.style.display = 'none';
 }
   function watchLoginState() {
     var origDoLogin = window.doLogin;
