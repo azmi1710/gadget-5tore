@@ -1553,12 +1553,24 @@
         return renderSystemPill(m.message, pillType, m.created_at);
       }
 
-      var cls = m.sender_type === 'customer' ? 'lc-msg--customer' : 'lc-msg--admin';
-      if (m.sender_name === 'AI Assistant') cls = 'lc-msg--ai';
+      // FIX BUG 1: Gunakan sender_type === 'ai' sebagai primary check,
+      // fallback ke pengecekan nama kalau sender_type tidak tersedia.
+      var isAi = m.sender_type === 'ai' || /\bai\s*assistant\b/i.test(m.sender_name || '');
+      var cls;
+      if (m.sender_type === 'customer') {
+        cls = 'lc-msg--customer';
+      } else if (isAi) {
+        cls = 'lc-msg--ai';
+      } else {
+        cls = 'lc-msg--admin';
+      }
 
+      // FIX BUG 2: Tampilkan sender label untuk AI juga, bukan hanya admin
       var senderHtml = '';
       if (m.sender_type === 'admin') {
         senderHtml = '<span class="lc-msg-sender">' + esc(m.sender_name || 'Admin') + '</span>';
+      } else if (isAi) {
+        senderHtml = '<span class="lc-msg-sender lc-msg-sender--ai">G5 AI</span>';
       }
 
       var t = m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -1572,16 +1584,20 @@
         cleanMsg = cleanMsg.trim();
       }
 
+      // FIX: AI juga pakai markdown parsing sama seperti admin
       var msgContent = '';
-      if (m.sender_type === 'admin' && typeof marked !== 'undefined') {
+      if ((m.sender_type === 'admin' || isAi) && typeof marked !== 'undefined') {
         msgContent = marked.parse(cleanMsg);
       } else {
         msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
       }
 
+      // FIX BUG 3: Tambah badge AI icon di bubble
+      var aiBadge = isAi ? '<span class="lc-ai-badge" title="G5 AI Assistant">&#x2728;</span>' : '';
       var checkHtml = (cls.indexOf('customer') !== -1) ? '<span class="lc-msg-check">\u2713\u2713</span>' : '';
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
+        + aiBadge
         + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
         + '</div>';

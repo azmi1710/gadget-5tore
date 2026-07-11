@@ -682,13 +682,15 @@
     var el = $('g5aiMessages');
     if (!ctx.messages.length) { renderWelcome(); return; }
 
-    var html = ctx.messages.map(function (m) {
+    var html = ctx.messages.map(function (m, idx) {
   var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
   if (m.role === 'system') cls = 'g5ai-msg--system';
+  // FIX: Hanya pesan terakhir yang dapat animasi (--new), cegah overlap
+  var isNew = idx === ctx.messages.length - 1;
   var content = m.role === 'bot' && typeof marked !== 'undefined'
     ? marked.parse(m.text)
     : esc(m.text);
-  return '<div class="g5ai-msg ' + cls + '">'
+  return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + '">'
     + content
     + '<span class="g5ai-msg-time">' + m.time + '</span>'
     + '</div>';
