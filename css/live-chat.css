@@ -399,13 +399,109 @@
 }
 
 .lc-msg--system {
+  display: none;
+}
+
+/* ===========================
+   SYSTEM PILLS (centered)
+   =========================== */
+.lc-pill {
   align-self: center;
-  background: none;
-  color: var(--muted, #6E6A5E);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
   font-size: 11px;
-  padding: 4px 12px;
-  max-width: 100%;
-  text-align: center;
+  line-height: 1.4;
+  max-width: 85%;
+  width: fit-content;
+  animation: lcMsgIn 0.3s ease;
+  margin: 4px auto;
+}
+
+.lc-pill-icon {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.lc-pill-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.lc-pill-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lc-pill-time {
+  font-size: 10px;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* Info — abu-abu netral */
+.lc-pill--info {
+  background: rgba(107, 114, 128, 0.08);
+  color: var(--muted, #6E6A5E);
+}
+
+/* Escalate — kuning, menunggu admin */
+.lc-pill--escalate {
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400E;
+}
+.lc-pill--escalate .lc-pill-icon {
+  color: #D97706;
+  opacity: 1;
+  animation: lc-pill-spin 2s linear infinite;
+}
+@keyframes lc-pill-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Connected — hijau, admin terhubung */
+.lc-pill--connected {
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803D;
+}
+.lc-pill--connected .lc-pill-icon {
+  color: #22C55E;
+  opacity: 1;
+}
+
+/* Takeover — hijau sedikit beda shade */
+.lc-pill--takeover {
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803D;
+}
+.lc-pill--takeover .lc-pill-icon {
+  color: #16A34A;
+  opacity: 1;
+}
+
+/* Dark mode pills */
+body.dark .lc-pill--info {
+  background: rgba(255, 255, 255, 0.06);
+  color: #9CA3AF;
+}
+body.dark .lc-pill--escalate {
+  background: rgba(245, 158, 11, 0.12);
+  color: #FDE68A;
+}
+body.dark .lc-pill--connected {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86EFAC;
+}
+body.dark .lc-pill--takeover {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86EFAC;
 }
 
 .lc-msg-sender {

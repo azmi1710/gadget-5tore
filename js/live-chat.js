@@ -418,16 +418,56 @@
     }
   }
 
+  // ── Helper: detect system message type ──
+  function getSystemPillType(m) {
+    if (m.sender_type === 'system') {
+      if (/memerlukan bantuan admin|Mohon tunggu/i.test(m.message)) return 'escalate';
+      if (/telah terhubung/i.test(m.message)) return 'connected';
+      return 'info';
+    }
+    if (m.sender_name === 'Sistem' || m.sender_name === 'System') {
+      if (/mengambil alih|takeover/i.test(m.message)) return 'takeover';
+      return 'info';
+    }
+    return null;
+  }
+
+  function isSystemMessage(m) {
+    return m.sender_type === 'system' || m.sender_name === 'Sistem' || m.sender_name === 'System';
+  }
+
+  // ── Render System Pill ──
+  function renderSystemPill(message, pillType, createdAt) {
+    var icons = {
+      escalate: 'loader',
+      connected: 'user-check',
+      takeover: 'hand-metal',
+      info: 'info',
+    };
+    var t = createdAt ? new Date(createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+    return '<div class="lc-pill lc-pill--' + (pillType || 'info') + '">'
+      + '<i data-lucide="' + (icons[pillType] || icons.info) + '" class="lc-pill-icon"></i>'
+      + '<span class="lc-pill-text">' + esc(message) + '</span>'
+      + '<span class="lc-pill-time">' + t + '</span>'
+      + '</div>';
+  }
+
   function renderCustomerMessages() {
     var el = $('lcMessages');
     if (!el) return;
 
     if (!ctx.messages.length) {
-      el.innerHTML = '<div class="lc-msg lc-msg--system">Percakapan dimulai. Silakan kirim pesan!</div>';
+      el.innerHTML = '<div class="lc-pill lc-pill--info"><i data-lucide="message-circle" class="lc-pill-icon"></i><span class="lc-pill-text">Percakapan dimulai. Silakan kirim pesan!</span></div>';
       return;
     }
 
     el.innerHTML = ctx.messages.map(function (m) {
+      // System message → centered pill
+      if (isSystemMessage(m)) {
+        var pillType = getSystemPillType(m);
+        return renderSystemPill(m.message, pillType, m.created_at);
+      }
+
       var cls = 'lc-msg--' + m.sender_type;
       if (m.sender_type === 'customer') cls = 'lc-msg--customer';
       else if (m.sender_type === 'admin') cls = 'lc-msg--admin';
@@ -1478,7 +1518,7 @@
       ctx.adminMessages[sessionId] = data || [];
 
       if (!ctx.adminMessages[sessionId].length) {
-        msgEl.innerHTML = '<div class="lc-msg lc-msg--system">Belum ada pesan</div>';
+        msgEl.innerHTML = '<div class="lc-pill lc-pill--info"><i data-lucide="message-circle" class="lc-pill-icon"></i><span class="lc-pill-text">Belum ada pesan</span></div>';
       } else {
         renderAdminMessages(sessionId);
       }
@@ -1507,6 +1547,12 @@
 
     var msgs = ctx.adminMessages[sessionId] || [];
     msgEl.innerHTML = msgs.map(function (m) {
+      // System message → centered pill
+      if (isSystemMessage(m)) {
+        var pillType = getSystemPillType(m);
+        return renderSystemPill(m.message, pillType, m.created_at);
+      }
+
       var cls = m.sender_type === 'customer' ? 'lc-msg--customer' : 'lc-msg--admin';
       if (m.sender_name === 'AI Assistant') cls = 'lc-msg--ai';
 
