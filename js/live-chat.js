@@ -1078,12 +1078,8 @@
       injectSidebarItem();
       ensureInboxStable();
 
-      // Hide G5 AI FAB when chat panel is active (avoid overlap), show when not
+      // G5 AI FAB stays visible in all panels (no overlap — sidebar left, FAB right)
       var isChatPanel = state && state.admin && state.admin.panel === 'chat';
-      var g5Fab = document.querySelector('#g5aiFab');
-      if (g5Fab) {
-        g5Fab.style.display = isChatPanel ? 'none' : '';
-      }
 
       if (isChatPanel) {
         // Blokir viewer dari mengakses chat panel
