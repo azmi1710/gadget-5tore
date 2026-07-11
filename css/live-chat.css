@@ -418,6 +418,7 @@ body.dark .lc-header-maximize:hover {
 .lc-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 14px;
   display: flex;
   flex-direction: column;
@@ -1038,6 +1039,7 @@ body.dark .lc-reply-indicator {
 .lc-inbox-sessions-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .lc-session-item {
@@ -1248,6 +1250,7 @@ body.dark .lc-reply-indicator {
 .lc-inbox-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
@@ -1799,6 +1802,7 @@ body.dark .lc-inbox-history-clear:hover {
 .g5a-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px;
   display: flex;
   flex-direction: column;

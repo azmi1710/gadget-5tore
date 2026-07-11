@@ -423,6 +423,7 @@ body.dark .g5ai-header-maximize:hover {
 
 .g5ai-demo-list {
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 0;
   flex: 1;
 }
@@ -472,6 +473,7 @@ body.dark .g5ai-header-maximize:hover {
 .g5ai-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   overflow-x: hidden;
   padding: 16px 14px;
   display: flex;

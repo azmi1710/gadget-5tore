@@ -1,6 +1,8 @@
 @property --angle{syntax:'<angle>';initial-value:0deg;inherits:false}
 :root{ --bg:#F4F1EA; --bg2:#FFFFFF; --bg3:#ECE7DC; --border:#DCD5C3; --border2:#C9C0A8; --fg:#1B1611; --fg2:#38322A; --muted:#6E6A5E; --accent:#C8A44E; --accent-dark:#8E6D1E; --accent-dim:rgba(var(--accent-rgb),0.12); --accent-soft:#F8F1DF; --danger:#B91C1C; --warning:#B45309; --info:#1D4ED8; --wa:#15803D; --success:#15803D; --success-rgb:21,128,61; --gold:var(--accent); --navy:#1B1611; --sh-sm:0 2px 8px rgba(60,40,10,0.06); --sh-md:0 4px 18px rgba(60,40,10,0.08); --sh-lg:0 10px 32px rgba(60,40,10,0.10); --sh-xl:0 16px 48px rgba(60,40,10,0.14); --radius:16px; --radius-sm:10px; --ease:cubic-bezier(.25,.8,.25,1); --glass:rgba(255,255,255,0.85); --glass2:rgba(255,255,255,0.92); --danger-rgb:185,28,28; --warning-rgb:180,83,9; --info-rgb:29,78,216; --accent-rgb:200,164,78; --gold-rgb:var(--accent-rgb); --max-w:1240px }
 *{margin:0;padding:0;box-sizing:border-box}
+/* Cegah scroll chaining — scroll child mentok jangan numpang ke parent */
+.sidebar,.side-nav,.detail-overlay,.admin-detail-overlay,.detail-info,.ad-info,.login-card,.table-wrap{overscroll-behavior:contain}
 ::selection{background:var(--accent);color:#fff}
 /* Lucide Icons — use em sizing to respect parent font-size */
 svg.lucide{width:1em;height:1em;vertical-align:middle;flex-shrink:0}

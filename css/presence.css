@@ -131,6 +131,7 @@
   padding: 6px 0;
   max-height: 240px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .presence-popover-item {
