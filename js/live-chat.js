@@ -22,6 +22,8 @@
     rtChannel: null,
     messages: [],
     pendingMessage: null,
+    _typingChannel: null,
+    _adminTypingTimer: null,
 
     // Admin
     activeSessionId: null,
@@ -35,6 +37,9 @@
     activeFilter: null, // null = all, 'ai', 'connecting', 'admin'
     _inboxObsSetup: false,
     _naggingTimer: null,
+    // Admin typing broadcast
+    adminTypingCh: null,
+    _lastTypingSession: null,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -795,6 +800,10 @@
             created_at: m.created_at,
           });
           renderCustomerMessages();
+          // Hide typing indicator when message arrives
+          var typingEl = $('lcTyping');
+          if (typingEl) typingEl.classList.remove('show');
+          clearTimeout(ctx._adminTypingTimer);
         }
 
         // If admin replied, mark as read
@@ -876,6 +885,38 @@
           console.log('[live-chat] customer realtime subscribed');
         }
       });
+
+    // Subscribe to admin typing channel
+    subscribeCustomerTyping();
+  }
+
+  // ── Customer Typing Channel (receives admin typing events) ──
+  function subscribeCustomerTyping() {
+    if (!ctx.sessionId || !state || !state.session || !state.session.sb) return;
+    if (ctx._typingChannel) {
+      try { ctx._typingChannel.unsubscribe(); } catch (e) { /* */ }
+    }
+    var typingChannelName = 'lc-typing:' + ctx.sessionId;
+    ctx._typingChannel = state.session.sb.channel(typingChannelName)
+      .on('broadcast', { event: 'admin_typing' }, function () {
+        var typingEl = $('lcTyping');
+        if (typingEl) {
+          typingEl.classList.add('show');
+          // Scroll to bottom to show typing indicator
+          var msgContainer = typingEl.parentElement;
+          if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+          // Auto-hide after 2.5 seconds of no typing
+          clearTimeout(ctx._adminTypingTimer);
+          ctx._adminTypingTimer = setTimeout(function () {
+            if (typingEl) typingEl.classList.remove('show');
+          }, 2500);
+        }
+      })
+      .subscribe(function (status) {
+        if (status === 'SUBSCRIBED') {
+          console.log('[live-chat] customer typing channel subscribed');
+        }
+      });
   }
 
   // ── Customer Cleanup ───────────────────────────
@@ -884,6 +925,12 @@
       try { ctx.rtChannel.unsubscribe(); } catch (e) { /* */ }
       ctx.rtChannel = null;
     }
+    // Cleanup typing channel
+    if (ctx._typingChannel) {
+      try { ctx._typingChannel.unsubscribe(); } catch (e) { /* */ }
+      ctx._typingChannel = null;
+    }
+    clearTimeout(ctx._adminTypingTimer);
   }
 
   window.addEventListener('beforeunload', cleanupCustomerRealtime);
@@ -1458,6 +1505,24 @@
 
     // Reload to get updated unread
     if (ctx.activeTab !== 'history') loadAdminSessions();
+
+    // Subscribe to typing broadcast channel for this session
+    if (state && state.session && state.session.sb && ctx.activeTab !== 'history') {
+      // Cleanup previous typing channel if switching sessions
+      if (ctx.adminTypingCh && ctx._lastTypingSession !== sessionId) {
+        try { ctx.adminTypingCh.unsubscribe(); } catch (e) { /* */ }
+      }
+      if (!ctx.adminTypingCh || ctx._lastTypingSession !== sessionId) {
+        var typingChName = 'lc-typing:' + sessionId;
+        ctx.adminTypingCh = state.session.sb.channel(typingChName).subscribe(function (status) {
+          if (status === 'SUBSCRIBED') {
+            console.log('[live-chat] admin typing channel subscribed for', sessionId);
+          }
+        });
+        ctx._lastTypingSession = sessionId;
+      }
+    }
+
     loadAdminMessages(sessionId);
   }
 
@@ -1526,7 +1591,7 @@
       console.error('[live-chat] load admin messages error:', e);
     }
 
-    // Bind send
+    // Bind send + typing broadcast
     var sendBtn = $('lcAdminSendBtn');
     var adminInput = $('lcAdminInput');
     if (sendBtn && isAdmin) {
@@ -1537,6 +1602,12 @@
       adminInput.oninput = function () {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        // Broadcast typing to customer
+        if (ctx.adminTypingCh) {
+          try {
+            ctx.adminTypingCh.send({ type: 'broadcast', event: 'admin_typing', payload: {} });
+          } catch (e) { /* channel not ready */ }
+        }
       };
     }
   }
