@@ -21,6 +21,22 @@
     cleanupDone: false,
     viewObserver: null,
   };
+  window.__presenceCtx = ctx;
+
+  // Sync presence state ke live chat
+  window.__presenceState = window.__presenceState || { admins: [] };
+  function syncPresenceToLiveChat() {
+    var allAdmins = [];
+    if (ctx.active) {
+      for (var k in ctx.presences) {
+        allAdmins.push(ctx.presences[k]);
+      }
+    }
+    window.__presenceState.admins = allAdmins;
+    if (typeof window.__lcUpdateOnlineStatus === 'function') {
+      window.__lcUpdateOnlineStatus();
+    }
+  }
 
   // ── Helpers ────────────────────────────────────────
   function roleLabel(r) {
@@ -199,6 +215,7 @@
           }
           recalcAllNames();
           renderIndicator();
+          syncPresenceToLiveChat();
         })
         .on('presence', { event: 'join' }, function (payload) {
           var newP = payload.newPresences || [];
@@ -209,6 +226,7 @@
           }
           recalcAllNames();
           renderIndicator();
+          syncPresenceToLiveChat();
           // Update popover kalau sedang terbuka untuk role ini
           var popover = $('presencePopover');
           if (popover && popover.dataset.role) renderPopover(popover.dataset.role);
@@ -220,6 +238,7 @@
           }
           recalcAllNames();
           renderIndicator();
+          syncPresenceToLiveChat();
           var popover = $('presencePopover');
           if (popover && popover.dataset.role) renderPopover(popover.dataset.role);
         })
@@ -237,6 +256,7 @@
               console.error('[presence] track error:', e);
             }
             ctx.active = true;
+            syncPresenceToLiveChat();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn('[presence] channel status:', status, err);
           }
@@ -258,6 +278,7 @@
     ctx.myName = '';
     removePopover();
     renderIndicator();
+    syncPresenceToLiveChat();
 
     // Cleanup di background (gak perlu nunggu)
     if (oldChannel) {
@@ -277,13 +298,11 @@
       var isLoggedIn = !!state.session.currentUser;
 
       if (isDash && isLoggedIn && !ctx.active) {
-        // Rejoin karena sebelumnya leave (switch ke katalog)
+        // Rejoin karena sebelumnya leave (logout/login ulang)
         ctx.cleanupDone = false;
         joinPresence();
-      } else if (!isDash && ctx.active) {
-        // Leave saat pindah ke katalog
-        leavePresence();
       }
+      // Tidak leave saat pindah ke katalog — admin tetap online
     });
 
     ctx.viewObserver.observe(dashView, {

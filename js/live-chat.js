@@ -41,6 +41,8 @@
     _naggingTimer: null,
     // Admin typing broadcast
     adminTypingCh: null,
+    // Track which session has customer typing (for session list indicator)
+    _typingSessions: {},
     _lastTypingSession: null,
     _customerTypingCh: null,
     _customerTypingTimer: null,
@@ -222,6 +224,9 @@
     ctx.popupEl.style.display = 'flex';
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
+
+    // Subscribe ke admin presence untuk deteksi online/offline
+    if (!_presenceChannels.length) subscribeAdminPresence();
 
     if (loadCustomerSession() && ctx.sessionId) {
       // Validate session still exists and is active in DB
@@ -482,6 +487,53 @@
       + '</div>';
   }
 
+  // ── Admin Presence Detection (Realtime) ───────
+  var _adminOnline = false;
+  var _presenceChannels = [];
+
+  function subscribeAdminPresence() {
+    try {
+      if (!state || !state.session || !state.session.sb) return;
+      var sb = state.session.sb;
+      var roles = ['admin', 'editor'];
+      for (var i = 0; i < roles.length; i++) {
+        (function (role) {
+          var ch = sb.channel('presence:' + role, {
+            config: { presence: { key: 'lc_observer_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) } }
+          });
+          ch.on('presence', { event: 'sync' }, function () {
+            var pState = ch.presenceState();
+            var count = Object.keys(pState).length;
+            var wasOnline = _adminOnline;
+            _adminOnline = count > 0;
+            if (wasOnline !== _adminOnline) updateReplyIndicator();
+          });
+          ch.subscribe(function (status) {
+            if (status === 'SUBSCRIBED') {
+              // Initial check
+              var pState = ch.presenceState();
+              if (Object.keys(pState).length > 0) {
+                _adminOnline = true;
+                updateReplyIndicator();
+              }
+            }
+          });
+          _presenceChannels.push(ch);
+        })(roles[i]);
+      }
+    } catch (e) {
+      console.warn('[live-chat] presence subscribe error:', e);
+    }
+  }
+
+  function unsubscribeAdminPresence() {
+    for (var i = 0; i < _presenceChannels.length; i++) {
+      try { _presenceChannels[i].unsubscribe(); } catch (e) {}
+    }
+    _presenceChannels = [];
+    _adminOnline = false;
+  }
+
   // ── Reply Time Indicator ────────────────────────
   function updateReplyIndicator() {
     var el = $('lcReplyIndicator');
@@ -494,15 +546,7 @@
     }
     el.style.display = 'flex';
 
-    // Check if any admin is online via presence
-    var isOnline = false;
-    try {
-      if (window.__presenceState && window.__presenceState.admins && window.__presenceState.admins.length > 0) {
-        isOnline = true;
-      }
-    } catch (e) { /* ignore */ }
-
-    if (isOnline) {
+    if (_adminOnline) {
       el.innerHTML = '<span class="lc-reply-indicator-dot online"></span> Admin sedang online · Biasanya membalas dalam hitungan menit';
     } else {
       el.innerHTML = '<span class="lc-reply-indicator-dot offline"></span> Admin sedang offline · Pesan akan dijawab oleh AI';
@@ -1386,7 +1430,7 @@
         + '<div class="lc-session-avatar">' + esc(initial) + '</div>'
         + '<div class="lc-session-info">'
         + '<div class="lc-session-name">' + esc(s.customer_name) + ' <span class="lc-session-mode ' + statusInfo.cls + '">' + statusInfo.label + '</span></div>'
-        + '<div class="lc-session-preview">' + esc(s.last_message || 'Belum ada pesan') + '</div>'
+        + '<div class="lc-session-preview' + (ctx._typingSessions[s.session_id] ? ' is-typing' : '') + '">' + (ctx._typingSessions[s.session_id] ? '<span class="lc-session-typing-text">mengetik<span class="lc-typing-dots-inline"><span>.</span><span>.</span><span>.</span></span></span>' : esc(s.last_message || 'Belum ada pesan')) + '</div>'
         + '</div>'
         + '<div class="lc-session-meta">'
         + '<span class="lc-session-time">' + timeAgo(s.last_message_at) + '</span>'
@@ -1607,6 +1651,10 @@
         var typingChName = 'lc-typing:' + sessionId;
         ctx.adminTypingCh = state.session.sb.channel(typingChName)
           .on('broadcast', { event: 'customer_typing' }, function () {
+            // Track typing for session list
+            ctx._typingSessions[sessionId] = true;
+            renderSessionList();
+            // Show typing dots in chat area
             var typingEl = $('lcCustomerTyping');
             if (typingEl) {
               typingEl.classList.add('show');
@@ -1617,6 +1665,12 @@
                 if (typingEl) typingEl.classList.remove('show');
               }, 2500);
             }
+            // Auto-clear typing status after 2.5s
+            clearTimeout(ctx._typingSessionListTimer);
+            ctx._typingSessionListTimer = setTimeout(function () {
+              delete ctx._typingSessions[sessionId];
+              renderSessionList();
+            }, 2500);
           })
           .subscribe(function (status) {
             if (status === 'SUBSCRIBED') {
@@ -1778,7 +1832,13 @@
         + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
         + '</div>';
-    }).join('');
+    }).join('') + '<div class="lc-typing" id="lcCustomerTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
+
+    // Restore typing indicator state if customer is currently typing
+    if (ctx._customerTypingTimer) {
+      var typingEl = $('lcCustomerTyping');
+      if (typingEl) typingEl.classList.add('show');
+    }
 
     msgEl.scrollTop = msgEl.scrollHeight;
   }
@@ -1956,6 +2016,24 @@
             var custTypingEl = $('lcCustomerTyping');
             if (custTypingEl) custTypingEl.classList.remove('show');
             clearTimeout(ctx._customerTypingTimer);
+          }
+          // Auto-read: kalau admin lagi buka chat ini, langsung clear unread
+          if (m.sender_type === 'customer') {
+            state.session.sb
+              .from('chat_sessions')
+              .update({ unread_by_admin: 0 })
+              .eq('session_id', m.session_id)
+              .then(function () {
+                // Update local session data biar badge langsung ilang tanpa reload
+                for (var i = 0; i < ctx.sessions.length; i++) {
+                  if (ctx.sessions[i].session_id === m.session_id) {
+                    ctx.sessions[i].unread_by_admin = 0;
+                    break;
+                  }
+                }
+                renderSessionList();
+                updateSidebarBadge();
+              });
           }
         }
 
@@ -2263,6 +2341,10 @@
     }
 
     console.log('[live-chat] module loaded');
+
+    // Expose untuk dipanggil dari luar
+    window.__lcUpdateOnlineStatus = updateReplyIndicator;
+    window.__lcAdminOnline = function () { return _adminOnline; };
   }
 
   if (document.readyState === 'loading') {

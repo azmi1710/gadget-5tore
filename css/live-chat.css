@@ -1124,6 +1124,26 @@ body.dark .lc-reply-indicator {
   text-overflow: ellipsis;
   margin-top: 3px;
 }
+.lc-session-preview.is-typing {
+  color: var(--accent, #C8A44E);
+  font-style: italic;
+}
+.lc-session-typing-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.lc-typing-dots-inline span {
+  animation: lcInlineDot 1.4s ease-in-out infinite;
+  opacity: 0.3;
+}
+.lc-typing-dots-inline span:nth-child(1) { animation-delay: 0s; }
+.lc-typing-dots-inline span:nth-child(2) { animation-delay: 0.2s; }
+.lc-typing-dots-inline span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes lcInlineDot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
 
 .lc-session-meta {
   display: flex;
