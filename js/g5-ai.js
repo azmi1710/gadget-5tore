@@ -67,6 +67,33 @@
     return role === 'admin' || role === 'editor';
   }
 
+  // Refresh semua data toko dari Supabase + re-render seluruh UI
+  // Dipanggil setiap kali AI selesai merespons, sebagai fallback kalau realtime lambat
+  function refreshStoreData() {
+    if (!state || !state.session || !state.session.sb) return;
+    var loads = [];
+    if (typeof loadPromos === 'function') loads.push(loadPromos());
+    if (typeof loadProducts === 'function') loads.push(loadProducts());
+    if (typeof loadSettings === 'function') loads.push(loadSettings());
+    if (typeof loadBranches === 'function') loads.push(loadBranches());
+    if (typeof loadCategories === 'function') loads.push(loadCategories());
+
+    Promise.allSettled(loads).then(function () {
+      // Re-render seluruh catalog (promo slider, produk, explore tabs, brand bar, dll)
+      if (typeof renderCatalog === 'function') renderCatalog();
+      // Re-render branch info di footer
+      if (typeof renderBranchInfo === 'function') renderBranchInfo();
+      // Re-render reviews
+      if (typeof renderReviews === 'function') renderReviews();
+      // Re-render dashboard kalau sedang aktif
+      if (isDashboardActive() && typeof renderDash === 'function') renderDash();
+      // Re-init lucide icons setelah DOM berubah
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        try { window.lucide.createIcons(); } catch (_) {}
+      }
+    });
+  }
+
   // ── Demo Questions ─────────────────────────────
   var DEMO_QUESTIONS = [
     { cat: '📊 Baca Data Produk', items: [
@@ -874,9 +901,14 @@
       var cats = [];
       products.forEach(function (p) { if (p.category && cats.indexOf(p.category) === -1) cats.push(p.category); });
 
+      // Fetch dengan timeout 30 detik menggunakan AbortController
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
+
       var res = await fetch(N8N_G5_AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: msg,
           session_id: ctx.sessionId,
@@ -901,9 +933,14 @@
         })
       });
 
+      clearTimeout(timeoutId);
       showTyping(false);
 
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        var errText = '';
+        try { errText = await res.text(); } catch (_) {}
+        throw new Error('HTTP ' + res.status + (errText ? ': ' + errText.substring(0, 200) : ''));
+      }
 
       var data = await res.json();
       var reply = '';
@@ -935,12 +972,24 @@
 
       ctx.messages.push({ role: 'bot', text: reply, time: timeStr(), followups: followups });
       renderMessages();
+
+      // Refresh data dari Supabase setelah AI merespons
+      // Ini fallback kalau realtime tidak langsung menyala
+      refreshStoreData();
     } catch (e) {
       showTyping(false);
       console.error('[g5-ai] webhook error:', e);
+      var errMsg = 'Maaf, terjadi kesalahan saat menghubungi AI.';
+      if (e.name === 'AbortError') {
+        errMsg = 'Maaf, AI tidak merespons dalam 30 detik. Silakan coba lagi.';
+      } else if (e.message && e.message.indexOf('Failed to fetch') > -1) {
+        errMsg = 'Maaf, tidak bisa terhubung ke server AI. Periksa koneksi internet Anda.';
+      } else if (e.message && e.message.indexOf('HTTP ') === 0) {
+        errMsg = 'Maaf, server AI mengembalikan error: ' + e.message + '. Coba lagi nanti.';
+      }
       ctx.messages.push({
         role: 'bot',
-        text: 'Maaf, terjadi kesalahan saat menghubungi AI. Pastikan webhook URL benar dan aktif.',
+        text: errMsg,
         time: timeStr()
       });
       renderMessages();

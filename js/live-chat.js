@@ -751,9 +751,14 @@
     }
 
     try {
+      // Fetch dengan timeout 30 detik menggunakan AbortController
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
+
       var res = await fetch(N8N_LIVE_CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           message: message,
           session_id: ctx.sessionId,
@@ -765,6 +770,8 @@
           }
         })
       });
+
+      clearTimeout(timeoutId);
 
       var reply = '';
       var shouldEscalate = false;
@@ -846,6 +853,31 @@
       }
     } catch (e) {
       console.error('[live-chat] webhook error:', e);
+      // Beri feedback ke customer kalau webhook gagal
+      var failMsg = 'Maaf, sedang ada gangguan. Silakan coba lagi.';
+      if (e.name === 'AbortError') {
+        failMsg = 'Maaf, jawaban memakan waktu terlalu lama. Silakan coba lagi.';
+      }
+      try {
+        if (state && state.session && state.session.sb && ctx.sessionId) {
+          await state.session.sb.from('chat_messages').insert([{
+            session_id: ctx.sessionId,
+            sender_type: 'admin',
+            sender_name: 'AI Assistant',
+            message: failMsg,
+          }]);
+          ctx.messages.push({
+            id: Date.now(),
+            sender_type: 'admin',
+            sender_name: 'AI Assistant',
+            message: failMsg,
+            created_at: new Date().toISOString(),
+          });
+          renderCustomerMessages();
+        }
+      } catch (insertErr) {
+        console.error('[live-chat] failed to insert error message:', insertErr);
+      }
     } finally {
       if (typingEl) typingEl.classList.remove('show');
     }
@@ -1712,7 +1744,7 @@
         : (session.mode === 'admin'
           ? '<button class="lc-takeover-btn taken" disabled><i data-lucide="check" style="margin-right:4px"></i>' + esc(session.handled_by || 'Ditangani') + '</button>'
           : '<button class="lc-takeover-btn" onclick="window.__lcTakeover(\'' + sessionId + '\')"><i data-lucide="hand" style="margin-right:4px"></i>Takeover</button>'))
-      + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + s.session_id + '\')" title="Hapus sesi"><i data-lucide="trash-2"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i data-lucide="x" style="margin-right:3px"></i>Tutup</button>')
+      + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + sessionId + '\')" title="Hapus sesi"><i data-lucide="trash-2"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i data-lucide="x" style="margin-right:3px"></i>Tutup</button>')
       + '</div>'
       + '</div>'
       + '<div class="lc-inbox-messages" id="lcAdminMessages">'

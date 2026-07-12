@@ -2,7 +2,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const scrollToEl = (el) => { if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
-  $('pubLogoBtn')?.addEventListener('click', () => { onLogoTripleClick(); });
+  $('pubLogoBtn')?.addEventListener('click', () => { /* handled by hidden-access.js */ });
   function setActiveNav(id) {
     document.querySelectorAll('.pub-nav-link').forEach(b => b.classList.remove('active'));
     const btn = $(id);
@@ -12,7 +12,7 @@
   $('navPromo')?.addEventListener('click', () => { setActiveNav('navPromo'); scrollToEl($('promoSection')); });
   $('navTentang')?.addEventListener('click', () => { setActiveNav('navTentang'); const footer = document.querySelector('.cat-footer'); if (footer) footer.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('navSearchBtn')?.addEventListener('click', () => { const search = $('catSearch'); if (search) { search.focus(); scrollToEl(search); } });
-  $('navWaBtn')?.addEventListener('click', () => { window.open('https://wa.me/', '_blank'); });
+  $('navWaBtn')?.addEventListener('click', () => { window.open('https://wa.me/' + (window.SELLER_WA || ''), '_blank'); });
   $('themeToggleBtn')?.addEventListener('click', toggleTheme);
   $('loginBtn')?.addEventListener('click', openLogin);
   $('catSearch')?.addEventListener('input', debounceCatSearch);
