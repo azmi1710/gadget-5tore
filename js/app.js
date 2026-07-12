@@ -1505,7 +1505,7 @@ function renderCatalog() {
       const bgStyle = hasBg ? `background-image:url('${esc(p.image)}')` : '';
       const badgeIcon = badgeIcons[i % badgeIcons.length];
       return `<div class="promo-slide${grad}" style="${bgStyle}" data-idx="${i}"><div class="promo-slide-body"><div class="promo-slide-badge"><i data-lucide="${badgeIcon}"></i> Promo</div><h3>${esc(p.title)}</h3>${p.description ? `<p>${esc(p.description)}</p>` : ''}<button class="promo-slide-cta" data-promo-idx="${i}">Lihat Detail <i data-lucide="arrow-right"></i></button></div></div>`;
-    }).join('')}</div><div class="promo-slider-counter"><span class="cur" id="promoCounterCur">01</span> / <span id="promoCounterTotal">${String(activePromos.length).padStart(2, '0')}</span></div><div class="promo-slider-progress"><div class="promo-slider-progress-bar" id="promoProgressBar"></div></div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div>`;
+    }).join('')}</div><div class="promo-slider-counter"><span class="cur" id="promoCounterCur">01</span> / <span id="promoCounterTotal">${String(activePromos.length).padStart(2, '0')}</span></div><div class="promo-slider-progress"><div class="promo-slider-progress-bar" id="promoProgressBar"></div></div><div class="promo-slider-dots">${activePromos.map((_, i) => `<button class="promo-slider-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></button>`).join('')}</div></div>`;
     setTimeout(initPromoSlider, 100);
   } else if (ps) { ps.style.display = 'none'; }
   const exploreEl = document.getElementById('exploreSection');

@@ -136,9 +136,10 @@ body.dark .hero-ticker-item .ticker-name{color:rgba(255,255,255,.4)}
 body.dark .hero-ticker-item:hover .ticker-name{color:var(--accent)}
 body.dark .ht-item{color:rgba(255,255,255,.4)}
 body.dark .ht-item i{color:rgba(var(--accent-rgb),.7);background:rgba(var(--accent-rgb),.08);border-color:rgba(var(--accent-rgb),.12)}
+body.dark .brand-bar{border-top-color:rgba(255,255,255,.04);border-bottom-color:rgba(255,255,255,.04)}
 body.dark .brand-bar-label{color:var(--muted)}
-body.dark .brand-bar-item{opacity:.25;filter:brightness(0) invert(1)}
-body.dark .brand-bar-item:hover{opacity:.9;filter:brightness(0) invert(1)}
+body.dark .brand-bar-item{opacity:.2;filter:brightness(0) invert(1)}
+body.dark .brand-bar-item:hover{opacity:.85;filter:brightness(0) invert(1)}
 body.dark .brand-text{opacity:.3;filter:brightness(0) invert(1)}
 body.dark .brand-text:hover{opacity:.9;filter:brightness(0) invert(1)}
 body.dark .dash-greeting { background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
