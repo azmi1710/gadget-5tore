@@ -769,8 +769,19 @@
   function copyBotMsg(btn) {
     var msgEl = btn.closest('.g5ai-msg--bot');
     if (!msgEl) return;
-    var text = msgEl.textContent || msgEl.innerText || '';
-    text = text.replace(/\d{1,2}:\d{2}\s*$/, '').trim();
+    // Ambil cuma konten pesan, bukan tombol copy dan bukan jam
+    var text = '';
+    var child = msgEl.firstChild;
+    while (child) {
+      if (child.nodeType === 1) { // element node
+        if (child.tagName === 'SPAN' && child.classList.contains('g5ai-msg-time')) break;
+        if (child.tagName !== 'BUTTON') text += child.textContent || child.innerText || '';
+      } else if (child.nodeType === 3) { // text node
+        text += child.textContent;
+      }
+      child = child.nextSibling;
+    }
+    text = text.trim();
     if (!text) return;
     navigator.clipboard.writeText(text).then(function () {
       btn.innerHTML = '<i data-lucide="check"></i>';
