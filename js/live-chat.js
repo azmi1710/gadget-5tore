@@ -496,26 +496,37 @@
       if (!state || !state.session || !state.session.sb) return;
       var sb = state.session.sb;
       var roles = ['admin', 'editor'];
+
+      // Helper: cek SEMUA channel untuk menentukan admin online/offline
+      // (bukan per-channel, supaya tidak salah saat admin di satu channel leave tapi editor di channel lain masih ada)
+      function recalcAdminOnline() {
+        var online = false;
+        for (var j = 0; j < _presenceChannels.length; j++) {
+          try {
+            var ps = _presenceChannels[j].presenceState();
+            if (Object.keys(ps).length > 0) {
+              online = true;
+              break;
+            }
+          } catch (e) {}
+        }
+        var wasOnline = _adminOnline;
+        _adminOnline = online;
+        if (wasOnline !== _adminOnline) updateReplyIndicator();
+      }
+
       for (var i = 0; i < roles.length; i++) {
         (function (role) {
           var ch = sb.channel('presence:' + role, {
             config: { presence: { key: 'lc_observer_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) } }
           });
-          ch.on('presence', { event: 'sync' }, function () {
-            var pState = ch.presenceState();
-            var count = Object.keys(pState).length;
-            var wasOnline = _adminOnline;
-            _adminOnline = count > 0;
-            if (wasOnline !== _adminOnline) updateReplyIndicator();
-          });
+          // Dengarkan sync, join, DAN leave — supaya benar-benar real-time
+          ch.on('presence', { event: 'sync' }, recalcAdminOnline);
+          ch.on('presence', { event: 'join' }, recalcAdminOnline);
+          ch.on('presence', { event: 'leave' }, recalcAdminOnline);
           ch.subscribe(function (status) {
             if (status === 'SUBSCRIBED') {
-              // Initial check
-              var pState = ch.presenceState();
-              if (Object.keys(pState).length > 0) {
-                _adminOnline = true;
-                updateReplyIndicator();
-              }
+              recalcAdminOnline();
             }
           });
           _presenceChannels.push(ch);
@@ -539,11 +550,8 @@
     var el = $('lcReplyIndicator');
     if (!el) return;
 
-    // Hide when there are messages (not in welcome state)
-    if (ctx.messages.length > 0) {
-      el.style.display = 'none';
-      return;
-    }
+    // Selalu tampilkan indicator, bahkan saat chat sudah berjalan
+    // supaya customer selalu tahu status admin secara real-time
     el.style.display = 'flex';
 
     if (_adminOnline) {
