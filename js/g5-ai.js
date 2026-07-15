@@ -4,8 +4,10 @@
    ============================================
    - Dashboard-only FAB + popup
    - Kirim ke N8N_G5_AI_URL (webhook)
-   - Session only, no DB storage
    - Semua role bisa akses
+   - [FEAT 1] Streaming Response — SSE support + progressive reveal
+   - [FEAT 2] Chat History Persistence — localStorage, survive refresh
+   - [FEAT 3] Regenerate Response — re-send last user query
    ============================================ */
 
 (function () {
@@ -13,7 +15,7 @@
   if (window.__G5AI_LOADED__) return;
   window.__G5AI_LOADED__ = true;
 
-  const $ = (id) => document.getElementById(id);
+  var $ = function (id) { return document.getElementById(id); };
 
   // ── Config ──────────────────────────────────────
   var N8N_G5_AI_URL = (typeof window.N8N_G5_AI_URL !== 'undefined') ? window.N8N_G5_AI_URL : '';
@@ -21,7 +23,7 @@
   var WELCOME_CHIPS = [];
 
   // ── Internal State ──────────────────────────────
-  const ctx = {
+  var ctx = {
     messages: [],
     isOpen: false,
     isSending: false,
@@ -29,25 +31,85 @@
     popupEl: null,
     observer: null,
     sessionId: null,
+    _chatLoaded: false,
+    // [FEAT 1] Streaming state
+    isStreaming: false,
+    streamAbortController: null,
+    _streamRevealTimer: null,
     // Drag state
     drag: {
       active: false,
-      startX: 0,
-      startY: 0,
-      offsetX: 0,
-      offsetY: 0,
+      startX: 0, startY: 0,
+      offsetX: 0, offsetY: 0,
       moved: false,
-      fabX: 0,
-      fabY: 0,
-      fabW: 56,
-      fabH: 56,
+      fabX: 0, fabY: 0,
+      fabW: 56, fabH: 56,
     },
   };
+
+  // ── [FEAT 2] Chat History Persistence ──────────
+  var STORAGE_KEY = 'g5ai_chat_history';
+  var MAX_STORED_MESSAGES = 100;
+  var _saveTimer = null;
+
+  function saveChat() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(function () {
+      try {
+        var toSave = ctx.messages
+          .filter(function (m) { return (m.role === 'user' || m.role === 'bot') && m.text; })
+          .slice(-MAX_STORED_MESSAGES)
+          .map(function (m) {
+            var obj = { role: m.role, text: m.text, time: m.time };
+            if (m.followups && m.followups.length) obj.followups = m.followups;
+            return obj;
+          });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          sid: ctx.sessionId,
+          ts: Date.now(),
+          msgs: toSave
+        }));
+      } catch (e) {
+        try {
+          var existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+          if (existing.msgs && existing.msgs.length > 20) {
+            existing.msgs = existing.msgs.slice(-30);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+          }
+        } catch (e2) { /* give up */ }
+      }
+    }, 500);
+  }
+
+  function loadChat() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.msgs) || !data.msgs.length) return false;
+      var age = Date.now() - (data.ts || 0);
+      if (age > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+      if (data.sid) ctx.sessionId = data.sid;
+      ctx.messages = data.msgs.filter(function (m) {
+        return m.role === 'user' || m.role === 'bot';
+      });
+      return ctx.messages.length > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function clearPersistedChat() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+  }
 
   // ── Helpers ─────────────────────────────────────
   function esc(s) {
     if (typeof window.esc === 'function') return window.esc(s);
-    const d = document.createElement('div');
+    var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
   }
@@ -63,40 +125,40 @@
 
   function isAllowedRole() {
     if (!state || !state.session || !state.session.currentUser) return false;
-    var role = state.session.currentUser.role;
-    return role === 'admin' || role === 'editor';
+    return true;
   }
 
-  // Refresh semua data toko dari Supabase + re-render seluruh UI
-  // Dipanggil setiap kali AI selesai merespons, sebagai fallback kalau realtime lambat
   function refreshStoreData() {
-    if (!state || !state.session || !state.session.sb) return;
-    var loads = [];
-    if (typeof loadPromos === 'function') loads.push(loadPromos());
-    if (typeof loadProducts === 'function') loads.push(loadProducts());
-    if (typeof loadSettings === 'function') loads.push(loadSettings());
-    if (typeof loadBranches === 'function') loads.push(loadBranches());
-    if (typeof loadCategories === 'function') loads.push(loadCategories());
-
-    Promise.allSettled(loads).then(function () {
-      // Re-render seluruh catalog (promo slider, produk, explore tabs, brand bar, dll)
-      if (typeof renderCatalog === 'function') renderCatalog();
-      // Re-render branch info di footer
-      if (typeof renderBranchInfo === 'function') renderBranchInfo();
-      // Re-render reviews
-      if (typeof renderReviews === 'function') renderReviews();
-      // Re-render dashboard kalau sedang aktif
-      if (isDashboardActive() && typeof renderDash === 'function') renderDash();
-      // Re-init lucide icons setelah DOM berubah
-      if (window.lucide && typeof window.lucide.createIcons === 'function') {
-        try { window.lucide.createIcons(); } catch (_) {}
-      }
-    });
+    if (typeof window.loadAllData === 'function') {
+      window.loadAllData();
+    }
   }
 
-  // ── Demo Questions ─────────────────────────────
+  /**
+   * Centralized reply extraction — supports all webhook response formats.
+   */
+  function extractReply(data) {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    if (typeof data === 'object') {
+      return data.reply || data.message || data.output || data.text || data.response || '';
+    }
+    return String(data);
+  }
+
+  /**
+   * Extract follow-up questions from response data.
+   */
+  function extractFollowups(data) {
+    if (!data || typeof data !== 'object') return [];
+    var raw = data.followups || data.suggestions || data.follow_up || [];
+    if (!Array.isArray(raw)) raw = [];
+    return raw.filter(function (f) { return typeof f === 'string' && f.trim(); }).slice(0, 3);
+  }
+
+  // ── Demo Questions ──────────────────────────────
   var DEMO_QUESTIONS = [
-    { cat: '📊 Baca Data Produk', items: [
+    { cat: '📦 Produk — Baca', items: [
       'Berapa total produk di toko saya?',
       'Produk apa saja yang stoknya habis?',
       'Produk mana yang stoknya di bawah 5?',
@@ -144,10 +206,7 @@
     if (!dd) return;
     demoPickerOpen = !demoPickerOpen;
     dd.classList.toggle('g5ai-demo-open', demoPickerOpen);
-    if (demoPickerOpen) {
-      // scroll to top of list
-      dd.scrollTop = 0;
-    }
+    if (demoPickerOpen) dd.scrollTop = 0;
   }
 
   function closeDemoPicker() {
@@ -182,12 +241,12 @@
   }
 
   // ── Draggable FAB ─────────────────────────────
-  var DRAG_THRESHOLD = 6; // px — di bawah ini dianggap klik
-  var IDLE_BEFORE_SHRINK = 3000; // 3 detik idle sebelum shrink ke mini-dot
-  var POS_KEY = 'g5ai_fab_pos'; // localStorage key untuk posisi
+  var DRAG_THRESHOLD = 6;
+  var IDLE_BEFORE_SHRINK = 3000;
+  var POS_KEY = 'g5ai_fab_pos';
   var shrinkTimer = null;
-  var DOT_SIZE = 22; // mini-dot diameter (desktop)
-  var FULL_SIZE = 56; // normal FAB diameter (desktop)
+  var DOT_SIZE = 22;
+  var FULL_SIZE = 56;
 
   function saveFabPos() {
     try {
@@ -220,7 +279,6 @@
     ctx.drag.fabW = fabW;
     ctx.drag.fabH = fabH;
 
-    // Load saved position atau default ke kanan
     var saved = loadFabPos();
     if (saved) {
       ctx.drag.fabX = saved.x;
@@ -232,57 +290,40 @@
       fab.classList.add('snapped-right');
     }
 
-    // Set posisi dari saved/default (override CSS)
     fab.style.bottom = 'auto';
     fab.style.right = 'auto';
     fab.style.left = ctx.drag.fabX + 'px';
     fab.style.top = ctx.drag.fabY + 'px';
 
-    // Mouse
     fab.addEventListener('mousedown', onDragStart);
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
-
-    // Touch
     fab.addEventListener('touchstart', onDragStart, { passive: false });
     document.addEventListener('touchmove', onDragMove, { passive: false });
     document.addEventListener('touchend', onDragEnd);
 
-    // Hover: expand dari mini-dot
     fab.addEventListener('mouseenter', function () {
-      if (fab.classList.contains('mini-dot')) {
-        expandFromDot();
-        cancelShrink();
-      }
+      if (fab.classList.contains('mini-dot')) { expandFromDot(); cancelShrink(); }
     });
     fab.addEventListener('mouseleave', function () {
-      if (!ctx.isOpen && !ctx.drag.active) {
-        scheduleShrink();
-      }
+      if (!ctx.isOpen && !ctx.drag.active) scheduleShrink();
     });
 
-    // Shrink ke mini-dot setelah animasi masuk
     setTimeout(function () {
       if (!ctx.isOpen) shrinkToDot();
     }, 600);
   }
 
   function getPointerPos(e) {
-    if (e.touches && e.touches.length) {
-      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
+    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
     return { x: e.clientX, y: e.clientY };
   }
 
   function onDragStart(e) {
-    // Kalau lagi mini-dot, expand dulu lalu langsung buka popup
     if (ctx.fabEl.classList.contains('mini-dot')) {
       expandFromDot();
       cancelShrink();
-      // Langsung buka popup setelah expand selesai (~280ms)
-      setTimeout(function () {
-        if (!ctx.isOpen) openPopup();
-      }, 300);
+      setTimeout(function () { if (!ctx.isOpen) openPopup(); }, 300);
       return;
     }
 
@@ -298,7 +339,6 @@
     ctx.drag.fabW = rect.width;
     ctx.drag.fabH = rect.height;
     ctx.drag.active = true;
-
     cancelShrink();
     e.preventDefault();
   }
@@ -321,7 +361,6 @@
     var newX = pos.x - ctx.drag.offsetX;
     var newY = pos.y - ctx.drag.offsetY;
 
-    // Clamp ke viewport
     var maxX = window.innerWidth - ctx.drag.fabW;
     var maxY = window.innerHeight - ctx.drag.fabH;
     newX = Math.max(0, Math.min(newX, maxX));
@@ -330,16 +369,12 @@
     ctx.drag.fabX = newX;
     ctx.drag.fabY = newY;
 
-    // Switch ke top/left positioning
     fab.style.bottom = 'auto';
     fab.style.right = 'auto';
     fab.style.left = newX + 'px';
     fab.style.top = newY + 'px';
 
-    // Update popup position real-time kalau sedang buka
-    if (ctx.isOpen) {
-      positionPopup();
-    }
+    if (ctx.isOpen) positionPopup();
   }
 
   function onDragEnd(e) {
@@ -349,19 +384,11 @@
     var fab = ctx.fabEl;
     fab.classList.remove('dragging');
 
-    // Kalau gak ada gerakan signifikan → anggap klik
-    if (!ctx.drag.moved) {
-      togglePopup();
-      return;
-    }
+    if (!ctx.drag.moved) { togglePopup(); return; }
 
-    // Snap ke edge kiri/kanan
     snapToEdge();
     saveFabPos();
-    // Setelah snap, shrink ke mini-dot setelah delay
-    if (!ctx.isOpen) {
-      setTimeout(shrinkToDot, 800);
-    }
+    if (!ctx.isOpen) setTimeout(shrinkToDot, 800);
   }
 
   function snapToEdge() {
@@ -370,12 +397,9 @@
     var vw = window.innerWidth;
     var margin = 12;
 
-    // Tentukan snap ke kiri atau kanan
     var snapLeft = margin;
     var snapRight = vw - ctx.drag.fabW - margin;
     var targetX = centerX < vw / 2 ? snapLeft : snapRight;
-
-    // Keep Y position, clamp ke viewport
     var targetY = Math.max(margin, Math.min(ctx.drag.fabY, window.innerHeight - ctx.drag.fabH - margin));
 
     ctx.drag.fabX = targetX;
@@ -384,26 +408,16 @@
     fab.style.transition = 'left 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)';
     fab.style.left = targetX + 'px';
     fab.style.top = targetY + 'px';
+    setTimeout(function () { fab.style.transition = ''; }, 380);
 
-    setTimeout(function () {
-      fab.style.transition = '';
-    }, 380);
-
-    // Update snap class buat popup positioning
     fab.classList.toggle('snapped-left', targetX <= vw / 2);
     fab.classList.toggle('snapped-right', targetX > vw / 2);
-
     saveFabPos();
-
-    // Update popup kalau buka
-    if (ctx.isOpen) {
-      setTimeout(positionPopup, 380);
-    }
+    if (ctx.isOpen) setTimeout(positionPopup, 380);
   }
 
   // ── Mini-Dot Shrink / Expand ─────────────────
   function getFabFullSize() {
-    // Match CSS responsive values
     var vw = window.innerWidth;
     if (vw <= 480) return 48;
     if (vw <= 768) return 50;
@@ -411,7 +425,6 @@
   }
 
   function getFabDotSize() {
-    // No dot on mobile
     var vw = window.innerWidth;
     if (vw <= 768) return getFabFullSize();
     return DOT_SIZE;
@@ -421,7 +434,6 @@
     if (ctx.isOpen || ctx.drag.active) return;
     var fab = ctx.fabEl;
     if (!fab) return;
-    // Don't shrink on mobile/tablet
     if (window.innerWidth <= 768) return;
 
     var isLeft = fab.classList.contains('snapped-left');
@@ -430,15 +442,7 @@
     var fullSize = FULL_SIZE;
     var sizeDiff = fullSize - dotSize;
 
-    // Adjust position so the dot stays at the same visual edge alignment
-    var newX;
-    if (isLeft) {
-      newX = margin;
-    } else {
-      newX = window.innerWidth - dotSize - margin;
-    }
-
-    // Adjust Y to keep vertically centered at same spot
+    var newX = isLeft ? margin : window.innerWidth - dotSize - margin;
     var newY = ctx.drag.fabY + (sizeDiff / 2);
     newY = Math.max(margin, Math.min(newY, window.innerHeight - dotSize - margin));
 
@@ -449,10 +453,7 @@
     fab.style.left = newX + 'px';
     fab.style.top = newY + 'px';
     fab.classList.add('mini-dot');
-
-    setTimeout(function () {
-      fab.style.transition = '';
-    }, 380);
+    setTimeout(function () { fab.style.transition = ''; }, 380);
   }
 
   function expandFromDot() {
@@ -465,15 +466,7 @@
     var dotSize = DOT_SIZE;
     var sizeDiff = fullSize - dotSize;
 
-    // Restore to full-size position at the same edge
-    var newX;
-    if (isLeft) {
-      newX = margin;
-    } else {
-      newX = window.innerWidth - fullSize - margin;
-    }
-
-    // Restore Y (shift back up by half the size difference)
+    var newX = isLeft ? margin : window.innerWidth - fullSize - margin;
     var newY = ctx.drag.fabY - (sizeDiff / 2);
     newY = Math.max(margin, Math.min(newY, window.innerHeight - fullSize - margin));
 
@@ -486,24 +479,16 @@
     fab.style.left = newX + 'px';
     fab.style.top = newY + 'px';
     fab.classList.remove('mini-dot');
-
-    setTimeout(function () {
-      fab.style.transition = '';
-    }, 320);
+    setTimeout(function () { fab.style.transition = ''; }, 320);
   }
 
   function scheduleShrink() {
     cancelShrink();
-    shrinkTimer = setTimeout(function () {
-      shrinkToDot();
-    }, IDLE_BEFORE_SHRINK);
+    shrinkTimer = setTimeout(function () { shrinkToDot(); }, IDLE_BEFORE_SHRINK);
   }
 
   function cancelShrink() {
-    if (shrinkTimer) {
-      clearTimeout(shrinkTimer);
-      shrinkTimer = null;
-    }
+    if (shrinkTimer) { clearTimeout(shrinkTimer); shrinkTimer = null; }
   }
 
   // ── Popup Positioning ──────────────────────────
@@ -512,7 +497,6 @@
     var popup = ctx.popupEl;
     if (!fab || !popup) return;
 
-    // Reset inline sizing — biar CSS yang handle height/maxHeight
     popup.style.height = '';
     popup.style.maxHeight = '';
 
@@ -523,7 +507,6 @@
     var MARGIN = 8;
 
     if (isMobile) {
-      // Mobile: full width, di atas FAB
       popup.style.left = '0';
       popup.style.right = '0';
       popup.style.bottom = (vh - rect.top + 8) + 'px';
@@ -534,61 +517,38 @@
       var popupW = Math.min(400, vw - 32);
       var popupMargin = 12;
       var popupMaxH = Math.min(540, vh - 140);
-
-      // Tentukan popup di kiri atau kanan FAB
       var fabCenterX = rect.left + rect.width / 2;
       var popupLeft, popupRight;
 
       if (fabCenterX < vw / 2) {
-        // FAB di kiri → popup di kanan FAB
         popupLeft = rect.right + popupMargin;
         popupRight = 'auto';
         if (popupLeft + popupW > vw - MARGIN) {
           popupLeft = Math.max(MARGIN, rect.left - popupW - popupMargin);
         }
-        if (popupLeft < MARGIN) {
-          popupLeft = MARGIN;
-          popupW = Math.min(popupW, vw - MARGIN * 2);
-        }
+        if (popupLeft < MARGIN) { popupLeft = MARGIN; popupW = Math.min(popupW, vw - MARGIN * 2); }
       } else {
-        // FAB di kanan → popup di kiri FAB
         popupLeft = 'auto';
         popupRight = vw - rect.left + popupMargin;
         var neededLeft = vw - popupRight - popupW;
         if (neededLeft < MARGIN) {
           popupRight = 'auto';
           popupLeft = Math.max(MARGIN, rect.right + popupMargin);
-          if (popupLeft + popupW > vw - MARGIN) {
-            popupLeft = MARGIN;
-            popupW = Math.min(popupW, vw - MARGIN * 2);
-          }
+          if (popupLeft + popupW > vw - MARGIN) { popupLeft = MARGIN; popupW = Math.min(popupW, vw - MARGIN * 2); }
         }
       }
 
-      // Vertical: popup muncul di atas FAB, di-clamp biar gak keluar layar
       var popupBottom = vh - rect.top + 8;
-      // Clamp: top edge popup >= MARGIN
-      // top edge = vh - popupBottom - popupMaxH >= MARGIN
       var maxBottom = vh - popupMaxH - MARGIN;
-      if (popupBottom > maxBottom) {
-        popupBottom = maxBottom;
-      }
-      if (popupBottom < MARGIN) {
-        popupBottom = MARGIN;
-      }
+      if (popupBottom > maxBottom) popupBottom = maxBottom;
+      if (popupBottom < MARGIN) popupBottom = MARGIN;
 
       popup.style.left = popupLeft === 'auto' ? 'auto' : popupLeft + 'px';
       popup.style.right = popupRight === 'auto' ? 'auto' : popupRight + 'px';
       popup.style.bottom = popupBottom + 'px';
       popup.style.top = 'auto';
       popup.style.width = popupW + 'px';
-
-      // transform-origin sesuai posisi
-      if (fabCenterX < vw / 2) {
-        popup.style.transformOrigin = 'bottom left';
-      } else {
-        popup.style.transformOrigin = 'bottom right';
-      }
+      popup.style.transformOrigin = fabCenterX < vw / 2 ? 'bottom left' : 'bottom right';
     }
   }
 
@@ -596,17 +556,14 @@
   function buildUI() {
     if (ctx.fabEl) return;
 
-    // FAB
     var fab = document.createElement('button');
     fab.className = 'g5ai-fab';
     fab.id = 'g5aiFab';
     fab.title = 'G5 Assistant';
     fab.innerHTML = '<i data-lucide="bot" class="g5ai-fab-icon"></i><span class="g5ai-fab-badge" id="g5aiFabBadge">0</span>';
-    // Jangan pakai onclick langsung — drag handler akan handle klik
     document.body.appendChild(fab);
     ctx.fabEl = fab;
 
-    // Popup
     var popup = document.createElement('div');
     popup.className = 'g5ai-popup';
     popup.id = 'g5aiPopup';
@@ -616,7 +573,7 @@
       + '<div class="g5ai-header-avatar"><i data-lucide="bot"></i></div>'
       + '<div class="g5ai-header-info">'
       + '<div class="g5ai-header-name">' + esc(AI_NAME) + '</div>'
-      + '<div class="g5ai-header-status"><span class="g5ai-status-dot"></span> Online</div>'
+      + '<div class="g5ai-header-status"><span class="g5ai-status-dot"></span> <span id="g5aiStatusText">Online</span></div>'
       + '</div>'
       + '<button class="g5ai-header-demo" id="g5aiDemoBtn" title="Demo Pertanyaan"><i data-lucide="list-checks"></i></button>'
       + '<button class="g5ai-header-clear" id="g5aiClearBtn" title="Hapus riwayat"><i data-lucide="trash-2"></i></button>'
@@ -626,6 +583,7 @@
       + buildDemoPickerHTML()
       + '<div class="g5ai-messages" id="g5aiMessages"></div>'
       + '<div class="g5ai-input-area">'
+      + '<button class="g5ai-stop-btn" id="g5aiStopBtn" title="Hentikan"><i data-lucide="square"></i></button>'
       + '<textarea class="g5ai-input" id="g5aiInput" placeholder="Tanya apa saja tentang toko..." rows="1"></textarea>'
       + '<button class="g5ai-send" id="g5aiSendBtn" title="Kirim"><i data-lucide="send"></i></button>'
       + '</div>';
@@ -645,27 +603,24 @@
     };
     $('g5aiClearBtn').onclick = clearChat;
 
+    // [FEAT 1] Stop streaming button
+    $('g5aiStopBtn').onclick = function () { stopStreaming(); };
+    $('g5aiStopBtn').style.display = 'none';
+
     // Demo picker events
-    $('g5aiDemoBtn').onclick = function (e) {
-      e.stopPropagation();
-      toggleDemoPicker();
-    };
+    $('g5aiDemoBtn').onclick = function (e) { e.stopPropagation(); toggleDemoPicker(); };
     $('g5aiDemoList').addEventListener('click', function (e) {
       var item = e.target.closest('.g5ai-demo-item');
-      if (item) {
-        pickDemoQuestion(item.getAttribute('data-q'));
-      }
+      if (item) pickDemoQuestion(item.getAttribute('data-q'));
     });
     $('g5aiDemoSearch').addEventListener('input', function () {
       var q = this.value.toLowerCase();
       var items = $('g5aiDemoList').querySelectorAll('.g5ai-demo-item');
       var cats = $('g5aiDemoList').querySelectorAll('.g5ai-demo-cat');
-      var lastCatIdx = -1;
       items.forEach(function (item) {
         var show = !q || item.getAttribute('data-q').toLowerCase().indexOf(q) !== -1;
         item.style.display = show ? '' : 'none';
         if (show) {
-          // show parent category
           var prev = item.previousElementSibling;
           while (prev) {
             if (prev.classList.contains('g5ai-demo-cat')) { prev.style.display = ''; break; }
@@ -673,7 +628,6 @@
           }
         }
       });
-      // hide empty categories
       cats.forEach(function (cat) {
         var next = cat.nextElementSibling;
         var hasVisible = false;
@@ -684,7 +638,6 @@
         cat.style.display = hasVisible ? '' : 'none';
       });
     });
-    // close demo picker when clicking outside
     document.addEventListener('click', function (e) {
       if (demoPickerOpen && !e.target.closest('.g5ai-demo-picker') && !e.target.closest('#g5aiDemoBtn')) {
         closeDemoPicker();
@@ -694,15 +647,10 @@
 
   // ── Toggle Popup ────────────────────────────────
   function togglePopup() {
-    if (ctx.isOpen) {
-      closePopup();
-    } else {
-      openPopup();
-    }
+    if (ctx.isOpen) closePopup(); else openPopup();
   }
 
   function openPopup() {
-    // Pastikan FAB expand dari mini-dot dulu
     expandFromDot();
     cancelShrink();
 
@@ -711,20 +659,24 @@
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
 
-    // Position popup berdasarkan posisi FAB
     setTimeout(positionPopup, 100);
 
-    // Buat session_id konsisten sekali per sesi chat
+    // [FEAT 2] Load persisted chat on first open
+    if (!ctx.messages.length && !ctx._chatLoaded) {
+      ctx._chatLoaded = true;
+      if (loadChat()) {
+        renderMessages();
+      } else {
+        renderWelcome();
+      }
+    } else if (!ctx.messages.length) {
+      renderWelcome();
+    }
+
     if (!ctx.sessionId) {
       ctx.sessionId = 'g5ai_' + Date.now();
     }
-
-    if (!ctx.messages.length) {
-      renderWelcome();
-    }
-    setTimeout(function () {
-      $('g5aiInput').focus();
-    }, 150);
+    setTimeout(function () { $('g5aiInput').focus(); }, 150);
   }
 
   function toggleMaximize() {
@@ -734,12 +686,12 @@
     var btn = $('g5aiMaxBtn');
     if (btn) btn.innerHTML = isMax ? '<i data-lucide="minimize-2"></i>' : '<i data-lucide="maximize-2"></i>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    // Re-position popup after size change
     if (ctx.isOpen) setTimeout(positionPopup, 50);
   }
 
   function closePopup() {
     closeDemoPicker();
+    if (ctx.isStreaming) stopStreaming();
     ctx.popupEl.classList.remove('maximized');
     ctx.popupEl.classList.add('closing');
     ctx.fabEl.classList.remove('open');
@@ -747,7 +699,6 @@
       ctx.popupEl.style.display = 'none';
       ctx.popupEl.classList.remove('closing');
       ctx.isOpen = false;
-      // Setelah tutup, shrink FAB ke mini-dot
       scheduleShrink();
     }, 250);
   }
@@ -769,19 +720,9 @@
   function copyBotMsg(btn) {
     var msgEl = btn.closest('.g5ai-msg--bot');
     if (!msgEl) return;
-    // Ambil cuma konten pesan, bukan tombol copy dan bukan jam
-    var text = '';
-    var child = msgEl.firstChild;
-    while (child) {
-      if (child.nodeType === 1) { // element node
-        if (child.tagName === 'SPAN' && child.classList.contains('g5ai-msg-time')) break;
-        if (child.tagName !== 'BUTTON') text += child.textContent || child.innerText || '';
-      } else if (child.nodeType === 3) { // text node
-        text += child.textContent;
-      }
-      child = child.nextSibling;
-    }
-    text = text.trim();
+    var bodyEl = msgEl.querySelector('.g5ai-msg-body');
+    var text = bodyEl ? (bodyEl.textContent || bodyEl.innerText || '') : (msgEl.textContent || msgEl.innerText || '');
+    text = text.replace(/\d{1,2}:\d{2}\s*$/, '').trim();
     if (!text) return;
     navigator.clipboard.writeText(text).then(function () {
       btn.innerHTML = '<i data-lucide="check"></i>';
@@ -799,40 +740,69 @@
     var el = $('g5aiMessages');
     if (!ctx.messages.length) { renderWelcome(); return; }
 
+    // Find last bot message index for [FEAT 3] regenerate button
+    var lastBotMsgIdx = -1;
+    for (var bi = ctx.messages.length - 1; bi >= 0; bi--) {
+      if (ctx.messages[bi].role === 'bot') { lastBotMsgIdx = bi; break; }
+    }
+
     var html = ctx.messages.map(function (m, idx) {
       var cls = m.role === 'user' ? 'g5ai-msg--user' : 'g5ai-msg--bot';
       if (m.role === 'system') cls = 'g5ai-msg--system';
       var isNew = idx === ctx.messages.length - 1;
-      var content = m.role === 'bot' && typeof marked !== 'undefined'
-        ? marked.parse(m.text)
-        : esc(m.text);
+      var isStreamMsg = ctx.isStreaming && idx === ctx.messages.length - 1 && m.role === 'bot';
+      var content = '';
 
-      // Copy button for bot messages
-      var copyBtn = '';
       if (m.role === 'bot') {
+        content = typeof marked !== 'undefined' ? marked.parse(m.text || '') : esc(m.text || '');
+      } else {
+        content = esc(m.text);
+      }
+
+      // Copy button (hide during streaming)
+      var copyBtn = '';
+      if (m.role === 'bot' && !isStreamMsg) {
         copyBtn = '<button class="g5ai-msg-copy" onclick="window.__g5aiCopy(this)" title="Salin"><i data-lucide="copy"></i></button>';
       }
 
-      // Follow-up questions after bot message
-      var followupsHtml = '';
-      if (m.role === 'bot' && m.followups && m.followups.length) {
-        var chips = m.followups.map(function (q) {
-          return '<button class="g5ai-followup-chip" onclick="window.__g5aiSend(\'' + esc(q).replace(/'/g, "\\'") + '\')">'
-            + '<i data-lucide="arrow-up-right"></i> ' + esc(q) + '</button>';
-        }).join('');
-        followupsHtml = '<div class="g5ai-followups">' + chips + '</div>';
+      // [FEAT 3] Regenerate button — only on LAST bot message
+      var regenBtn = '';
+      if (m.role === 'bot' && !isStreamMsg && idx === lastBotMsgIdx) {
+        regenBtn = '<button class="g5ai-msg-regen" onclick="window.__g5aiRegen()" title="Regenerasi jawaban"><i data-lucide="refresh-cw"></i></button>';
       }
 
-      return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + '">'
-        + copyBtn
-        + content
+      var streamCls = isStreamMsg ? ' g5ai-streaming' : '';
+
+      // Build action buttons row (below text, never overlap)
+      var actionsHtml = '';
+      if (regenBtn || copyBtn) {
+        actionsHtml = '<div class="g5ai-msg-actions">' + regenBtn + copyBtn + '</div>';
+      }
+
+      return '<div class="g5ai-msg ' + cls + (isNew ? ' g5ai-msg--new' : '') + streamCls + '">'
+        + '<div class="g5ai-msg-body">' + content + '</div>'
+        + actionsHtml
         + '<span class="g5ai-msg-time">' + m.time + '</span>'
-        + '</div>'
-        + followupsHtml;
+        + '</div>';
     }).join('');
 
-    // Add typing indicator placeholder
-    html += '<div class="g5ai-typing" id="g5aiTyping"><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div></div>';
+    // Follow-ups for last bot message (only if not streaming)
+    var lastBot = null;
+    for (var i = ctx.messages.length - 1; i >= 0; i--) {
+      if (ctx.messages[i].role === 'bot') { lastBot = ctx.messages[i]; break; }
+    }
+    if (lastBot && lastBot.followups && lastBot.followups.length && !ctx.isStreaming) {
+      var chips = lastBot.followups.map(function (q) {
+        return '<button class="g5ai-followup-chip" onclick="window.__g5aiSend(\'' + esc(q).replace(/'/g, "\\'") + '\')">'
+          + '<i data-lucide="arrow-up-right"></i> ' + esc(q) + '</button>';
+      }).join('');
+      html += '<div class="g5ai-followups">' + chips + '</div>';
+    }
+
+    // Typing indicator (hidden during streaming)
+    if (!ctx.isStreaming) {
+      html += '<div class="g5ai-typing" id="g5aiTyping"><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div><div class="g5ai-typing-dot"></div></div>';
+    }
 
     el.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -848,9 +818,228 @@
     }
   }
 
+  // ── [FEAT 1] Streaming / Progressive Reveal ─────
+
+  /**
+   * Update the streaming message body directly (no full re-render).
+   */
+  var _streamRenderTimer = null;
+
+  function updateStreamContent(text) {
+    clearTimeout(_streamRenderTimer);
+    _streamRenderTimer = setTimeout(function () {
+      var bodyEl = document.querySelector('.g5ai-msg--bot.g5ai-streaming .g5ai-msg-body');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = typeof marked !== 'undefined' ? marked.parse(text || '') : esc(text || '');
+      var msgEl = $('g5aiMessages');
+      if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+    }, 60);
+  }
+
+  function finalizeStreamContent(text) {
+    clearTimeout(_streamRenderTimer);
+    var bodyEl = document.querySelector('.g5ai-msg--bot.g5ai-streaming .g5ai-msg-body');
+    if (bodyEl) {
+      bodyEl.innerHTML = typeof marked !== 'undefined' ? marked.parse(text || '') : esc(text || '');
+    }
+    var msgEl = $('g5aiMessages');
+    if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+  }
+
+  function showStopButton(show) {
+    var btn = $('g5aiStopBtn');
+    var sendBtn = $('g5aiSendBtn');
+    if (btn) btn.style.display = show ? 'flex' : 'none';
+    if (sendBtn) sendBtn.style.display = show ? 'none' : 'flex';
+  }
+
+  function setStatusStreaming(isStreaming) {
+    var statusText = $('g5aiStatusText');
+    if (statusText) statusText.textContent = isStreaming ? 'Mengetik...' : 'Online';
+  }
+
+  /**
+   * Stop the current streaming/reveal response.
+   */
+  function stopStreaming() {
+    if (!ctx.isStreaming) return;
+    if (ctx.streamAbortController) {
+      ctx.streamAbortController.abort();
+      ctx.streamAbortController = null;
+    }
+    clearTimeout(ctx._streamRevealTimer);
+    clearTimeout(_streamRenderTimer);
+
+    var lastMsg = ctx.messages[ctx.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'bot') {
+      finalizeStreamContent(lastMsg.text);
+      if (!lastMsg.text.trim()) ctx.messages.pop();
+    }
+
+    ctx.isStreaming = false;
+    showStopButton(false);
+    setStatusStreaming(false);
+    ctx.isSending = false;
+    renderMessages();
+    saveChat();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+
+  /**
+   * [FEAT 1] Progressive reveal — reveals text word by word for non-SSE responses.
+   * Gives a streaming-like feel without complex stream parsing.
+   */
+  function progressiveReveal(fullText, followups, msgIdx) {
+    var words = fullText.split(/(\s+)/);
+    var currentIdx = 0;
+    var accumulated = '';
+
+    ctx.messages[msgIdx] = { role: 'bot', text: '', time: timeStr(), followups: [] };
+    ctx.isStreaming = true;
+    renderMessages();
+    showTyping(false);
+    showStopButton(true);
+    setStatusStreaming(true);
+
+    function revealNext() {
+      if (currentIdx >= words.length || !ctx.isStreaming) {
+        // Done or stopped
+        ctx.messages[msgIdx].text = accumulated;
+        ctx.messages[msgIdx].followups = followups;
+        ctx.isStreaming = false;
+        showStopButton(false);
+        setStatusStreaming(false);
+        finalizeStreamContent(accumulated);
+        renderMessages();
+        saveChat();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+
+      // Reveal 2-3 words per tick for natural speed
+      var chunk = Math.min(3, words.length - currentIdx);
+      for (var i = 0; i < chunk; i++) {
+        accumulated += words[currentIdx];
+        currentIdx++;
+      }
+
+      ctx.messages[msgIdx].text = accumulated;
+      updateStreamContent(accumulated);
+
+      // ~20ms per word group
+      ctx._streamRevealTimer = setTimeout(revealNext, 20 * chunk);
+    }
+
+    revealNext();
+  }
+
+  /**
+   * [FEAT 1] Handle real SSE streaming response (only when content-type is text/event-stream).
+   */
+  function handleSSEResponse(res, msgIdx) {
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var accumulated = '';
+    var followups = [];
+    var buffer = '';
+
+    ctx.messages[msgIdx] = { role: 'bot', text: '', time: timeStr(), followups: [] };
+    ctx.isStreaming = true;
+    renderMessages();
+    showTyping(false);
+    showStopButton(true);
+    setStatusStreaming(true);
+
+    reader.read().then(function processResult(result) {
+      if (result.done) {
+        // Stream complete — finalize
+        ctx.messages[msgIdx].text = accumulated;
+        ctx.messages[msgIdx].followups = followups;
+        ctx.isStreaming = false;
+        showStopButton(false);
+        setStatusStreaming(false);
+        if (!accumulated.trim()) {
+          ctx.messages.pop();
+        } else {
+          finalizeStreamContent(accumulated);
+        }
+        renderMessages();
+        saveChat();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+
+      var chunk = decoder.decode(result.value, { stream: true });
+      buffer += chunk;
+
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+
+        // SSE format: "data: ..."
+        if (line.indexOf('data: ') === 0) {
+          var payload = line.substring(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            var parsed = JSON.parse(payload);
+            var token = parsed.text || parsed.token || parsed.delta || parsed.content
+              || parsed.reply || parsed.message || parsed.output || parsed.response || '';
+            if (token) {
+              accumulated += token;
+              ctx.messages[msgIdx].text = accumulated;
+              updateStreamContent(accumulated);
+            }
+            if (parsed.followups || parsed.suggestions || parsed.follow_up) {
+              followups = (parsed.followups || parsed.suggestions || parsed.follow_up || [])
+                .filter(function (f) { return typeof f === 'string' && f.trim(); }).slice(0, 3);
+            }
+          } catch (e) {
+            if (payload) {
+              accumulated += payload;
+              ctx.messages[msgIdx].text = accumulated;
+              updateStreamContent(accumulated);
+            }
+          }
+        } else if (line.indexOf('data:') === 0) {
+          var payload2 = line.substring(5).trim();
+          if (payload2 !== '[DONE]' && payload2) {
+            accumulated += payload2;
+            ctx.messages[msgIdx].text = accumulated;
+            updateStreamContent(accumulated);
+          }
+        } else {
+          // Plain text
+          accumulated += line;
+          ctx.messages[msgIdx].text = accumulated;
+          updateStreamContent(accumulated);
+        }
+      }
+
+      return reader.read().then(processResult);
+    }).catch(function (e) {
+      if (e.name === 'AbortError') return; // handled by stopStreaming
+      console.error('[g5-ai] SSE read error:', e);
+      if (!accumulated) {
+        ctx.messages[msgIdx].text = 'Maaf, terjadi kesalahan saat menerima respons dari AI.';
+      }
+      ctx.messages[msgIdx].text = accumulated;
+      ctx.messages[msgIdx].followups = followups;
+      ctx.isStreaming = false;
+      showStopButton(false);
+      setStatusStreaming(false);
+      if (!accumulated.trim()) ctx.messages.pop();
+      else finalizeStreamContent(accumulated);
+      renderMessages();
+      saveChat();
+    });
+  }
+
   // ── Send Message ────────────────────────────────
   async function sendMessage(text) {
-    if (ctx.isSending) return;
+    if (ctx.isSending || ctx.isStreaming) return;
 
     var input = $('g5aiInput');
     var msg = (typeof text === 'string' && text) || (input ? input.value.trim() : '');
@@ -861,8 +1050,9 @@
     // Add user message
     ctx.messages.push({ role: 'user', text: msg, time: timeStr() });
     renderMessages();
+    saveChat();
 
-    // If no webhook URL, show placeholder response
+    // If no webhook URL
     if (!N8N_G5_AI_URL) {
       showTyping(true);
       setTimeout(function () {
@@ -882,12 +1072,10 @@
     showTyping(true);
     $('g5aiSendBtn').disabled = true;
 
-    // Build history dari pesan sebelumnya (skip system messages)
-      var history = ctx.messages
-        .filter(function (m) { return m.role === 'user' || m.role === 'bot'; })
-        .map(function (m) {
-          return (m.role === 'user' ? 'Customer: ' : 'AI: ') + m.text;
-        });
+    // Build history
+    var history = ctx.messages
+      .filter(function (m) { return m.role === 'user' || m.role === 'bot'; })
+      .map(function (m) { return (m.role === 'user' ? 'Customer: ' : 'AI: ') + m.text; });
 
     try {
       // Build store data context
@@ -912,18 +1100,19 @@
       var cats = [];
       products.forEach(function (p) { if (p.category && cats.indexOf(p.category) === -1) cats.push(p.category); });
 
-      // Fetch dengan timeout 30 detik menggunakan AbortController
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
+      // Fetch dengan timeout 60 detik
+      ctx.streamAbortController = new AbortController();
+      var timeoutId = setTimeout(function () { ctx.streamAbortController.abort(); }, 60000);
 
       var res = await fetch(N8N_G5_AI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
+        signal: ctx.streamAbortController.signal,
         body: JSON.stringify({
           message: msg,
           session_id: ctx.sessionId,
           history: history,
+          stream: true,
           context: {
             store_name: settings.store_name || 'Gadget 5tore',
             role: (state && state.session && state.session.currentUser && state.session.currentUser.role) || 'viewer',
@@ -953,67 +1142,246 @@
         throw new Error('HTTP ' + res.status + (errText ? ': ' + errText.substring(0, 200) : ''));
       }
 
-      var data = await res.json();
-      var reply = '';
+      // ── Determine response type ──
+      var contentType = (res.headers.get('content-type') || '').toLowerCase();
+      var isSSE = contentType.indexOf('text/event-stream') !== -1;
+      var msgIdx = ctx.messages.length;
 
-      // Support various webhook response formats
-      if (typeof data === 'string') {
-        reply = data;
-      } else if (data.reply) {
-        reply = data.reply;
-      } else if (data.message) {
-        reply = data.message;
-      } else if (data.output) {
-        reply = data.output;
-      } else if (data.text) {
-        reply = data.text;
-      } else if (data.response) {
-        reply = data.response;
+      if (isSSE) {
+        // Real SSE streaming — read body as stream
+        handleSSEResponse(res, msgIdx);
       } else {
-        reply = JSON.stringify(data);
+        // Normal response — read full body, parse as JSON, progressive reveal
+        var responseText = await res.text();
+        var data = null;
+        try { data = JSON.parse(responseText); } catch (e) { /* not JSON */ }
+
+        var reply = '';
+        var followups = [];
+
+        if (data && typeof data === 'object') {
+          reply = extractReply(data);
+          followups = extractFollowups(data);
+        } else if (typeof data === 'string') {
+          reply = data;
+        } else if (responseText) {
+          reply = responseText;
+        }
+
+        if (!reply) {
+          reply = 'Maaf, AI tidak mengembalikan respons yang valid.';
+        }
+
+        // Use progressive reveal for visual streaming effect
+        progressiveReveal(reply, followups, msgIdx);
       }
 
-      // Extract follow-up questions from response
-      var followups = [];
-      if (data && typeof data === 'object') {
-        followups = data.followups || data.suggestions || data.follow_up || [];
-        if (!Array.isArray(followups)) followups = [];
-        followups = followups.filter(function (f) { return typeof f === 'string' && f.trim(); }).slice(0, 3);
-      }
-
-      ctx.messages.push({ role: 'bot', text: reply, time: timeStr(), followups: followups });
-      renderMessages();
-
-      // Refresh data dari Supabase setelah AI merespons
-      // Ini fallback kalau realtime tidak langsung menyala
       refreshStoreData();
     } catch (e) {
       showTyping(false);
+      showStopButton(false);
+      setStatusStreaming(false);
+      ctx.isStreaming = false;
+      clearTimeout(ctx._streamRevealTimer);
       console.error('[g5-ai] webhook error:', e);
       var errMsg = 'Maaf, terjadi kesalahan saat menghubungi AI.';
       if (e.name === 'AbortError') {
-        errMsg = 'Maaf, AI tidak merespons dalam 30 detik. Silakan coba lagi.';
+        errMsg = 'Maaf, AI tidak merespons dalam 60 detik. Silakan coba lagi.';
       } else if (e.message && e.message.indexOf('Failed to fetch') > -1) {
         errMsg = 'Maaf, tidak bisa terhubung ke server AI. Periksa koneksi internet Anda.';
       } else if (e.message && e.message.indexOf('HTTP ') === 0) {
         errMsg = 'Maaf, server AI mengembalikan error: ' + e.message + '. Coba lagi nanti.';
       }
-      ctx.messages.push({
-        role: 'bot',
-        text: errMsg,
-        time: timeStr()
-      });
+      ctx.messages.push({ role: 'bot', text: errMsg, time: timeStr() });
       renderMessages();
+      saveChat();
     } finally {
       ctx.isSending = false;
+      ctx.streamAbortController = null;
       $('g5aiSendBtn').disabled = false;
+      // Only reset stop button if not actively streaming/revealing
+      if (!ctx.isStreaming) {
+        showStopButton(false);
+        setStatusStreaming(false);
+      }
       if (input) input.focus();
     }
   }
 
+  // ── [FEAT 3] Regenerate Response ─────────────────
+  function regenerateResponse() {
+    if (ctx.isSending || ctx.isStreaming) return;
+
+    // Find last user message
+    var lastUserIdx = -1;
+    for (var i = ctx.messages.length - 1; i >= 0; i--) {
+      if (ctx.messages[i].role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx === -1) return;
+
+    // Remove all messages after last user message
+    while (ctx.messages.length > lastUserIdx + 1) ctx.messages.pop();
+
+    var userText = ctx.messages[lastUserIdx].text;
+
+    renderMessages();
+    saveChat();
+
+    // Add spinning animation
+    var regenBtns = document.querySelectorAll('.g5ai-msg-regen');
+    regenBtns.forEach(function (b) { b.classList.add('regenerating'); });
+
+    _sendForRegenerate(userText);
+  }
+
+  /**
+   * Internal: Send AI request for regeneration (without re-adding user message).
+   */
+  async function _sendForRegenerate(msg) {
+    if (!N8N_G5_AI_URL) {
+      ctx.messages.push({
+        role: 'bot',
+        text: 'Webhook belum dikonfigurasi. Set URL n8n di variabel N8N_G5_AI_URL untuk mengaktifkan AI.',
+        time: timeStr()
+      });
+      renderMessages();
+      return;
+    }
+
+    ctx.isSending = true;
+    showTyping(true);
+    $('g5aiSendBtn').disabled = true;
+
+    var history = ctx.messages
+      .filter(function (m) { return m.role === 'user' || m.role === 'bot'; })
+      .map(function (m) { return (m.role === 'user' ? 'Customer: ' : 'AI: ') + m.text; });
+
+    try {
+      var db = (state && state.db) || {};
+      var products = (db.products || []).map(function (p) {
+        return {
+          id: p.id, name: p.name, brand: p.brand, category: p.category,
+          price: p.price, discount_price: p.discount_price, discount_percent: p.discount_percent,
+          stock: p.stock, sold: p.sold || 0, featured: p.featured, archived: p.archived,
+          description: p.description,
+          images: (p.images || []).length,
+          variants: (p.variants || []).map(function (v) { return { name: v.name, diff: v.diff, stock: v.stock }; }),
+        };
+      });
+      var promos = (db.promos || []).map(function (p) {
+        return { id: p.id, title: p.title, description: p.description, active: p.active, sort_order: p.sort_order };
+      });
+      var branches = (db.branches || []).map(function (b) {
+        return { id: b.id, name: b.name, is_default: b.is_default, address: b.address, phone: b.phone, wa_numbers: b.wa_numbers, hours: b.hours };
+      });
+      var settings = db.settings || {};
+      var cats = [];
+      products.forEach(function (p) { if (p.category && cats.indexOf(p.category) === -1) cats.push(p.category); });
+
+      ctx.streamAbortController = new AbortController();
+      var timeoutId = setTimeout(function () { ctx.streamAbortController.abort(); }, 60000);
+
+      var res = await fetch(N8N_G5_AI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctx.streamAbortController.signal,
+        body: JSON.stringify({
+          message: msg,
+          session_id: ctx.sessionId,
+          history: history,
+          stream: true,
+          context: {
+            store_name: settings.store_name || 'Gadget 5tore',
+            role: (state && state.session && state.session.currentUser && state.session.currentUser.role) || 'viewer',
+            display_name: (state && state.session && state.session.currentUser && state.session.currentUser.display_name) || '',
+            store_data: {
+              products: products,
+              categories: cats,
+              promos: promos,
+              branches: branches,
+              settings: {
+                tagline: settings.tagline || '',
+                description: settings.description || '',
+                whatsapp: settings.whatsapp || '',
+                footer_text: settings.footer_text || '',
+              },
+            }
+          }
+        })
+      });
+
+      clearTimeout(timeoutId);
+      showTyping(false);
+
+      if (!res.ok) {
+        var errText = '';
+        try { errText = await res.text(); } catch (_) {}
+        throw new Error('HTTP ' + res.status + (errText ? ': ' + errText.substring(0, 200) : ''));
+      }
+
+      var contentType = (res.headers.get('content-type') || '').toLowerCase();
+      var isSSE = contentType.indexOf('text/event-stream') !== -1;
+      var msgIdx = ctx.messages.length;
+
+      if (isSSE) {
+        handleSSEResponse(res, msgIdx);
+      } else {
+        var responseText = await res.text();
+        var data = null;
+        try { data = JSON.parse(responseText); } catch (e) {}
+
+        var reply = '';
+        var followups = [];
+
+        if (data && typeof data === 'object') {
+          reply = extractReply(data);
+          followups = extractFollowups(data);
+        } else if (typeof data === 'string') {
+          reply = data;
+        } else if (responseText) {
+          reply = responseText;
+        }
+
+        if (!reply) reply = 'Maaf, AI tidak mengembalikan respons yang valid.';
+        progressiveReveal(reply, followups, msgIdx);
+      }
+
+      refreshStoreData();
+    } catch (e) {
+      showTyping(false);
+      showStopButton(false);
+      setStatusStreaming(false);
+      ctx.isStreaming = false;
+      clearTimeout(ctx._streamRevealTimer);
+      console.error('[g5-ai] regenerate error:', e);
+      var errMsg = 'Maaf, terjadi kesalahan saat menghubungi AI.';
+      if (e.name === 'AbortError') {
+        errMsg = 'Maaf, AI tidak merespons dalam 60 detik. Silakan coba lagi.';
+      } else if (e.message && e.message.indexOf('Failed to fetch') > -1) {
+        errMsg = 'Maaf, tidak bisa terhubung ke server AI. Periksa koneksi internet Anda.';
+      } else if (e.message && e.message.indexOf('HTTP ') === 0) {
+        errMsg = 'Maaf, server AI mengembalikan error: ' + e.message + '. Coba lagi nanti.';
+      }
+      ctx.messages.push({ role: 'bot', text: errMsg, time: timeStr() });
+      renderMessages();
+      saveChat();
+    } finally {
+      ctx.isSending = false;
+      ctx.streamAbortController = null;
+      $('g5aiSendBtn').disabled = false;
+      if (!ctx.isStreaming) {
+        showStopButton(false);
+        setStatusStreaming(false);
+      }
+    }
+  }
+
   function clearChat() {
+    if (ctx.isStreaming) stopStreaming();
     ctx.messages = [];
-    ctx.sessionId = null;  // reset session, chat baru = konteks baru
+    ctx.sessionId = null;
+    clearPersistedChat();
+    ctx._chatLoaded = false;
     renderWelcome();
   }
 
@@ -1031,7 +1399,6 @@
 
     ctx.observer.observe(dashView, { attributes: true, attributeFilter: ['class'] });
 
-    // Initial check
     var show = isDashboardActive() && isAllowedRole();
     if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
   }
@@ -1041,10 +1408,11 @@
     return state && state.admin && state.admin.panel === 'chat';
   }
 
-function showFabIfAllowed() {
-  var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
-  if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
-}
+  function showFabIfAllowed() {
+    var show = isDashboardActive() && isAllowedRole() && !isChatPanelActive();
+    if (ctx.fabEl) ctx.fabEl.style.display = show ? '' : 'none';
+  }
+
   function watchLoginState() {
     var origDoLogin = window.doLogin;
     var origDoAccessLogin = window.doAccessLogin;
@@ -1056,26 +1424,18 @@ function showFabIfAllowed() {
     }
 
     if (origDoLogin) {
-      window.doLogin = function () {
-        origDoLogin.apply(this, arguments);
-        afterLogin();
-      };
+      window.doLogin = function () { origDoLogin.apply(this, arguments); afterLogin(); };
     }
     if (origDoAccessLogin) {
-      window.doAccessLogin = function () {
-        origDoAccessLogin.apply(this, arguments);
-        afterLogin();
-      };
+      window.doAccessLogin = function () { origDoAccessLogin.apply(this, arguments); afterLogin(); };
     }
     if (origDoVisitorLogin) {
-      window.doVisitorLogin = function () {
-        origDoVisitorLogin.apply(this, arguments);
-        afterLogin();
-      };
+      window.doVisitorLogin = function () { origDoVisitorLogin.apply(this, arguments); afterLogin(); };
     }
 
     window.doLogout = function () {
       if (ctx.isOpen) closePopup();
+      if (ctx.isStreaming) stopStreaming();
       ctx.messages = [];
       if (ctx.fabEl) ctx.fabEl.style.display = 'none';
       if (origDoLogout) origDoLogout.apply(this, arguments);
@@ -1088,17 +1448,17 @@ function showFabIfAllowed() {
   });
 
   // ── PUBLIC API ─────────────────────────────────
-
-  /**
-   * Kirim pesan dari welcome chip.
-   */
-  window.__g5aiSend = function (text) {
-    sendMessage(text);
+  window.__g5aiSend = function (text) { sendMessage(text); };
+  window.__g5aiCopy = function (btn) { copyBotMsg(btn); };
+  window.__g5aiStop = function () { stopStreaming(); };
+  window.__g5aiRegen = function () { regenerateResponse(); };
+  window.__g5aiGetHistory = function () {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
   };
-
-  window.__g5aiCopy = function (btn) {
-    copyBotMsg(btn);
-  };
+  window.__g5aiClearHistory = function () { clearChat(); };
 
   // ── INIT ────────────────────────────────────────
   function init() {
@@ -1106,7 +1466,7 @@ function showFabIfAllowed() {
     initDrag();
     watchDashboard();
     watchLoginState();
-    console.log('[g5-ai] module loaded');
+    console.log('[g5-ai] module loaded (v3 — streaming + history + regenerate)');
   }
 
   if (document.readyState === 'loading') {

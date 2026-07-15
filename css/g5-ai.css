@@ -601,15 +601,27 @@ body.dark .g5ai-msg hr {
   text-align: center;
 }
 
-/* --- Copy Button on Bot Messages --- */
-.g5ai-msg--bot {
-  position: relative;
+/* --- Action Buttons Container (below text) --- */
+.g5ai-msg-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
+.g5ai-msg--bot:hover .g5ai-msg-actions {
+  opacity: 1;
+}
+
+/* Always show on touch devices */
+@media (hover: none) {
+  .g5ai-msg-actions { opacity: 0.5; }
+}
+
+/* --- Copy Button --- */
 .g5ai-msg-copy {
-  position: absolute;
-  top: 4px;
-  right: 4px;
   width: 26px;
   height: 26px;
   border-radius: 6px;
@@ -621,22 +633,10 @@ body.dark .g5ai-msg hr {
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0s, color 0s;
   flex-shrink: 0;
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
-  z-index: 2;
-}
-
-.g5ai-msg--bot:hover .g5ai-msg-copy {
-  opacity: 1;
-}
-
-/* Always show on touch devices */
-@media (hover: none) {
-  .g5ai-msg-copy { opacity: 0.5; }
 }
 
 .g5ai-msg-copy:hover {
@@ -650,7 +650,6 @@ body.dark .g5ai-msg hr {
 
 .g5ai-msg-copy.copied {
   color: #34C759;
-  opacity: 1;
 }
 
 /* --- Follow-up Questions --- */
@@ -700,12 +699,19 @@ body.dark .g5ai-msg hr {
   flex-shrink: 0;
 }
 
-/* Dark mode: copy button */
+/* Dark mode: action buttons container */
+body.dark .g5ai-msg-actions {
+  opacity: 0;
+}
+body.dark .g5ai-msg--bot:hover .g5ai-msg-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  body.dark .g5ai-msg-actions { opacity: 0.5; }
+}
+
 body.dark .g5ai-msg-copy {
   color: rgba(255, 255, 255, 0.3);
-}
-body.dark .g5ai-msg--bot:hover .g5ai-msg-copy {
-  opacity: 1;
 }
 body.dark .g5ai-msg-copy:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -713,7 +719,6 @@ body.dark .g5ai-msg-copy:hover {
 }
 body.dark .g5ai-msg-copy.copied {
   color: #30D158;
-  opacity: 1;
 }
 
 /* Dark mode: follow-up chips */
@@ -724,6 +729,128 @@ body.dark .g5ai-followup-chip {
 }
 body.dark .g5ai-followup-chip:hover {
   background: rgba(10, 132, 255, 0.1);
+}
+
+/* --- [FEAT 1] .g5ai-msg-body wrapper --- */
+.g5ai-msg--bot .g5ai-msg-body {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Streaming cursor blink at end of bot message */
+.g5ai-msg--bot.g5ai-streaming .g5ai-msg-body::after {
+  content: '\258C'; /* ▌ */
+  animation: g5aiStreamCursor 0.7s step-end infinite;
+  color: #007AFF;
+  font-weight: 400;
+  margin-left: 1px;
+  line-height: 1;
+}
+
+@keyframes g5aiStreamCursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Hide action buttons during streaming */
+.g5ai-msg--bot.g5ai-streaming .g5ai-msg-actions {
+  display: none;
+}
+
+/* --- [FEAT 3] Regenerate Button --- */
+.g5ai-msg-regen {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #8E8E93;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0s, color 0s, transform 0.25s ease;
+}
+
+.g5ai-msg-regen:hover {
+  background: rgba(60, 60, 67, 0.08);
+  color: #1C1C1E;
+}
+
+.g5ai-msg-regen:active {
+  background: rgba(60, 60, 67, 0.12);
+}
+
+.g5ai-msg-regen.regenerating svg {
+  animation: g5aiRegenSpin 0.8s linear infinite;
+}
+
+@keyframes g5aiRegenSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* --- [FEAT 1] Stop Generating Button --- */
+.g5ai-stop-btn {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #FF3B30;
+  background: transparent;
+  color: #FF3B30;
+  font-size: 12px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0s, color 0s;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.g5ai-stop-btn:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.g5ai-stop-btn:active {
+  background: rgba(255, 59, 48, 0.18);
+  transform: scale(0.92);
+}
+
+/* Dark mode: streaming cursor */
+body.dark .g5ai-msg--bot.g5ai-streaming .g5ai-msg-body::after {
+  color: #0A84FF;
+}
+
+/* Dark mode: regenerate button */
+body.dark .g5ai-msg-regen {
+  color: rgba(255, 255, 255, 0.3);
+}
+body.dark .g5ai-msg-regen:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #F2F2F7;
+}
+body.dark .g5ai-msg-regen:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark mode: stop button */
+body.dark .g5ai-stop-btn {
+  border-color: #FF453A;
+  color: #FF453A;
+}
+body.dark .g5ai-stop-btn:hover {
+  background: rgba(255, 69, 58, 0.12);
+}
+body.dark .g5ai-stop-btn:active {
+  background: rgba(255, 69, 58, 0.2);
 }
 
 /* --- Scrollable table inside bubble --- */
