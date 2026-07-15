@@ -46,22 +46,11 @@
     _lastTypingSession: null,
     _customerTypingCh: null,
     _customerTypingTimer: null,
-    // Offline queue
-    _offlineQueue: [],
-    _isOffline: !navigator.onLine,
-    _queueProcessing: false,
-    // Image attachment
-    STORAGE_BUCKET: 'chat-attachments',
-    _uploadingImg: null,       // { file, preview: dataURL }
-    _adminUploadingImg: null,
-    // Quick Actions
-    _quickActions: [],         // loaded from DB
-    _quickActionsLoaded: false,
-    // Chat Rating
-    _customerRating: null,
-    // Autoclose
-    AUTO_CLOSE_MINUTES: 30,
-    _autoCloseTimer: null,
+    // Sidebar collapse state
+    sidebarCollapsed: false,
+    // Quick actions settings
+    quickActions: [],
+    _qaPanelOpen: false,
   };
 
   // ── Helpers ─────────────────────────────────────
@@ -77,365 +66,6 @@
     return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   }
 
-  // ── Offline Queue Helpers ─────────────────────────
-  var QUEUE_LS_KEY = 'g5chat_offline_queue';
-
-  function saveOfflineQueue() {
-    try {
-      localStorage.setItem(QUEUE_LS_KEY, JSON.stringify(ctx._offlineQueue));
-    } catch (e) { /* ignore */ }
-  }
-
-  function loadOfflineQueue() {
-    try {
-      var saved = localStorage.getItem(QUEUE_LS_KEY);
-      if (saved) {
-        ctx._offlineQueue = JSON.parse(saved);
-        if (!Array.isArray(ctx._offlineQueue)) ctx._offlineQueue = [];
-      }
-    } catch (e) {
-      ctx._offlineQueue = [];
-    }
-  }
-
-  function addToOfflineQueue(text) {
-    var item = {
-      id: 'pq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      text: text,
-      timestamp: new Date().toISOString(),
-    };
-    ctx._offlineQueue.push(item);
-    saveOfflineQueue();
-    return item;
-  }
-
-  function removeFromOfflineQueue(id) {
-    ctx._offlineQueue = ctx._offlineQueue.filter(function (m) { return m.id !== id; });
-    saveOfflineQueue();
-  }
-
-  function clearOfflineQueue() {
-    ctx._offlineQueue = [];
-    saveOfflineQueue();
-  }
-
-  async function processOfflineQueue() {
-    if (ctx._queueProcessing || !ctx._offlineQueue.length || !ctx.sessionId || !state.session.sb) return;
-    if (!navigator.onLine) return;
-    ctx._queueProcessing = true;
-    renderOfflineBanner();
-
-    // Proses satu per satu (FIFO)
-    while (ctx._offlineQueue.length > 0 && navigator.onLine) {
-      var item = ctx._offlineQueue[0];
-      try {
-        var { error: iErr } = await state.session.sb
-          .from('chat_messages')
-          .insert([{
-            session_id: ctx.sessionId,
-            sender_type: 'customer',
-            sender_name: ctx.customerName,
-            message: item.text,
-          }]);
-        if (iErr) throw iErr;
-
-        // Update session
-        await state.session.sb
-          .from('chat_sessions')
-          .update({
-            last_message: item.text,
-            last_message_at: new Date().toISOString(),
-            unread_by_admin: (ctx._offlineQueue.length || 0) + 1,
-          })
-          .eq('session_id', ctx.sessionId);
-
-        // Berhasil → tambah ke messages & hapus dari queue
-        ctx.messages.push({
-          id: Date.now(),
-          sender_type: 'customer',
-          sender_name: ctx.customerName,
-          message: item.text,
-          created_at: item.timestamp,
-        });
-        removeFromOfflineQueue(item.id);
-        renderCustomerMessages();
-
-        // Forward ke webhook AI kalau mode AI
-        var session = await getSessionFromDB(ctx.sessionId);
-        if (session && session.mode === 'ai' && N8N_LIVE_CHAT_URL) {
-          forwardToWebhook(item.text, session);
-        }
-      } catch (e) {
-        console.error('[live-chat] queue send failed for', item.id, e);
-        // Gagal → stop proses, coba lagi nanti
-        break;
-      }
-    }
-
-    ctx._queueProcessing = false;
-    renderOfflineBanner();
-  }
-
-  function updateOfflineState() {
-    ctx._isOffline = !navigator.onLine;
-    renderOfflineBanner();
-    if (!ctx._isOffline && ctx.isOpen && ctx.sessionId) {
-      // Online lagi → proses queue
-      setTimeout(processOfflineQueue, 500);
-    }
-  }
-
-  function renderOfflineBanner() {
-    var banner = $('lcOfflineBanner');
-    if (!banner) return;
-    var qLen = ctx._offlineQueue.length;
-    if (ctx._isOffline || qLen > 0) {
-      banner.style.display = 'flex';
-      if (ctx._isOffline && qLen === 0) {
-        banner.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;flex-shrink:0"></i> <span>Kamu sedang offline. Pesan akan dikirim saat kembali online.</span>';
-      } else if (ctx._isOffline && qLen > 0) {
-        banner.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;flex-shrink:0"></i> <span>Kamu sedang offline. <strong>' + qLen + '</strong> pesan menunggu untuk dikirim.</span>';
-      } else {
-        // Online tapi masih ada queue
-        if (ctx._queueProcessing) {
-          banner.innerHTML = '<i data-lucide="loader-2" class="lc-spin-icon" style="width:14px;height:14px;flex-shrink:0"></i> <span>Mengirim ' + qLen + ' pesan tertunda...</span>';
-        } else {
-          banner.innerHTML = '<i data-lucide="alert-circle" style="width:14px;height:14px;flex-shrink:0"></i> <span><strong>' + qLen + '</strong> pesan gagal dikirim.</span> <button class="lc-retry-btn" onclick="window.__lcRetryQueue()">Coba Lagi</button>';
-        }
-      }
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-    } else {
-      banner.style.display = 'none';
-    }
-  }
-
-  // ── Chat Rating (Customer) ─────────────────────
-  async function loadExistingRating() {
-    if (!ctx.sessionId || !state || !state.session || !state.session.sb) return null;
-    try {
-      var { data, error } = await state.session.sb
-        .from('chat_ratings')
-        .select('*')
-        .eq('session_id', ctx.sessionId)
-        .maybeSingle();
-      if (error) return null;
-      return data;
-    } catch (e) { return null; }
-  }
-
-  function showRatingUI() {
-    var inputArea = ctx.popupEl.querySelector('.lc-input-area');
-    if (!inputArea) return;
-
-    // Cek apakah sudah pernah rate
-    loadExistingRating().then(function (existing) {
-      if (existing) {
-        // Sudah pernah rate — tampilkan terima kasih + tombol baru
-        inputArea.innerHTML =
-          '<div class="lc-rating-thanks">'
-          + '<div class="lc-rating-stars-readonly">' + renderStars(existing.rating) + '</div>'
-          + '<span class="lc-rating-thanks-text">Terima kasih atas rating kamu!</span>'
-          + '</div>'
-          + '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:8px"><i data-lucide="plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
-        bindNewSessionBtn();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        return;
-      }
-
-      // Belum rate — tampilkan form rating
-      inputArea.innerHTML =
-        '<div class="lc-rating-panel">'
-        + '<div class="lc-rating-title">Bagaimana pengalaman chat kamu?</div>'
-        + '<div class="lc-rating-stars" id="lcRatingStars">'
-        + [1,2,3,4,5].map(function (n) {
-          return '<button class="lc-rating-star" data-r="' + n + '" title="' + n + ' bintang">'
-            + '<i data-lucide="star"></i></button>';
-        }).join('')
-        + '</div>'
-        + '<textarea class="lc-rating-feedback" id="lcRatingFeedback" placeholder="Feedback opsional (tidak wajib)..." rows="2" maxlength="300"></textarea>'
-        + '<button class="lc-rating-submit" id="lcRatingSubmit" disabled><i data-lucide="send" style="margin-right:4px"></i>Kirim Rating</button>'
-        + '</div>'
-        + '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:8px"><i data-lucide="plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
-
-      if (typeof lucide !== 'undefined') lucide.createIcons();
-      bindNewSessionBtn();
-
-      var starsContainer = $('lcRatingStars');
-      var submitBtn = $('lcRatingSubmit');
-      var selectedRating = 0;
-
-      if (starsContainer) {
-        starsContainer.addEventListener('click', function (e) {
-          var star = e.target.closest('.lc-rating-star');
-          if (!star) return;
-          selectedRating = parseInt(star.getAttribute('data-r'), 10);
-          // Highlight stars
-          var stars = starsContainer.querySelectorAll('.lc-rating-star');
-          for (var i = 0; i < stars.length; i++) {
-            stars[i].classList.toggle('active', i < selectedRating);
-          }
-          if (submitBtn) submitBtn.disabled = false;
-        });
-
-        // Hover preview
-        starsContainer.addEventListener('mouseover', function (e) {
-          var star = e.target.closest('.lc-rating-star');
-          if (!star) return;
-          var hov = parseInt(star.getAttribute('data-r'), 10);
-          var stars = starsContainer.querySelectorAll('.lc-rating-star');
-          for (var i = 0; i < stars.length; i++) {
-            stars[i].classList.toggle('hover', i < hov);
-          }
-        });
-        starsContainer.addEventListener('mouseleave', function () {
-          var stars = starsContainer.querySelectorAll('.lc-rating-star');
-          for (var i = 0; i < stars.length; i++) {
-            stars[i].classList.remove('hover');
-          }
-        });
-      }
-
-      if (submitBtn) {
-        submitBtn.onclick = function () {
-          if (selectedRating === 0) return;
-          var feedback = $('lcRatingFeedback');
-          submitRating(selectedRating, feedback ? feedback.value.trim() : '');
-        };
-      }
-    });
-  }
-
-  function renderStars(rating) {
-    var html = '';
-    for (var i = 1; i <= 5; i++) {
-      html += '<span class="lc-rating-star-ro ' + (i <= rating ? 'filled' : '') + '"><i data-lucide="star"></i></span>';
-    }
-    return html;
-  }
-
-  async function submitRating(rating, feedback) {
-    if (!ctx.sessionId || !state || !state.session || !state.session.sb) return;
-
-    var submitBtn = $('lcRatingSubmit');
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<div class="lc-attach-spinner" style="width:14px;height:14px;border-color:rgba(255,255,255,0.3);border-top-color:#fff"></div> Mengirim...';
-    }
-
-    try {
-      var { error } = await state.session.sb
-        .from('chat_ratings')
-        .insert([{
-          session_id: ctx.sessionId,
-          rating: rating,
-          feedback: feedback || null,
-        }]);
-      if (error) throw error;
-
-      ctx._customerRating = rating;
-
-      // Replace UI with thanks
-      var inputArea = ctx.popupEl.querySelector('.lc-input-area');
-      if (inputArea) {
-        inputArea.innerHTML =
-          '<div class="lc-rating-thanks">'
-          + '<div class="lc-rating-stars-readonly">' + renderStars(rating) + '</div>'
-          + '<span class="lc-rating-thanks-text">Terima kasih atas rating kamu!</span>'
-          + '</div>'
-          + '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:8px"><i data-lucide="plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
-        bindNewSessionBtn();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-      }
-    } catch (e) {
-      console.error('[live-chat] submit rating error:', e);
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i data-lucide="send" style="margin-right:4px"></i>Kirim Rating';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-      }
-    }
-  }
-
-  function bindNewSessionBtn() {
-    var btn = $('lcNewSessionBtn');
-    if (btn) {
-      btn.onclick = function () {
-        clearCustomerSession();
-        ctx.sessionId = null;
-        ctx.messages = [];
-        ctx._customerRating = null;
-        cleanupCustomerRealtime();
-        renderCustomerForm();
-      };
-    }
-  }
-
-  // ── Image Upload Helpers ──────────────────────────
-  function compressImage(file, maxW, maxH, quality) {
-    return new Promise(function (resolve) {
-      if (!file || !file.type.startsWith('image/')) { resolve(null); return; }
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var img = new Image();
-        img.onload = function () {
-          var w = img.width, h = img.height;
-          if (w > maxW) { h = h * maxW / w; w = maxW; }
-          if (h > maxH) { w = w * maxH / h; h = maxH; }
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', quality || 0.7));
-        };
-        img.onerror = function () { resolve(null); };
-        img.src = e.target.result;
-      };
-      reader.onerror = function () { resolve(null); };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function uploadChatImage(file, sessionId) {
-    if (!state.session.sb) return null;
-    try {
-      var dataURL = await compressImage(file, 1024, 1024, 0.75);
-      if (!dataURL) return null;
-
-      // Konversi dataURL ke Blob
-      var res = await fetch(dataURL);
-      var blob = await res.blob();
-
-      var ext = file.name.split('.').pop().toLowerCase();
-      var fileName = sessionId + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + (ext === 'png' ? 'png' : 'jpg');
-
-      var { data, error } = await state.session.sb.storage
-        .from(ctx.STORAGE_BUCKET)
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
-
-      if (error) {
-        console.error('[live-chat] upload error:', error);
-        return null;
-      }
-
-      // Dapatkan public URL
-      var { data: urlData } = state.session.sb.storage
-        .from(ctx.STORAGE_BUCKET)
-        .getPublicUrl(data.path);
-
-      return urlData.publicUrl;
-    } catch (e) {
-      console.error('[live-chat] upload exception:', e);
-      return null;
-    }
-  }
-
-  function renderImageInMsg(imageUrl, senderType) {
-    if (!imageUrl) return '';
-    var containerCls = (senderType === 'customer') ? 'lc-msg-img-wrap lc-msg-img-wrap--customer' : 'lc-msg-img-wrap lc-msg-img-wrap--admin';
-    return '<div class="' + containerCls + '">'
-      + '<img class="lc-msg-img" src="' + esc(imageUrl) + '" alt="Gambar" loading="lazy" onclick="window.__lcZoomImg(this.src)">'
-      + '</div>';
-  }
-
   function timeAgo(dateStr) {
     if (!dateStr) return '';
     var d = new Date(dateStr);
@@ -445,46 +75,6 @@
     if (diff < 3600) return Math.floor(diff / 60) + 'm lalu';
     if (diff < 86400) return Math.floor(diff / 3600) + 'j lalu';
     return Math.floor(diff / 86400) + 'h lalu';
-  }
-
-  // ── Quick Actions ───────────────────────────────
-  var DEFAULT_QUICK_ACTIONS = [
-    { icon: 'package-search', label: 'Tanya Stok Produk' },
-    { icon: 'tag', label: 'Cek Harga' },
-    { icon: 'shield-check', label: 'Info Garansi' },
-    { icon: 'headphones', label: 'Hubungin Admin' },
-  ];
-
-  function getDefaultQuickActions() {
-    return DEFAULT_QUICK_ACTIONS.map(function (a, i) {
-      return { id: 'default_' + i, icon: a.icon, label: a.label, is_active: true, sort_order: i };
-    });
-  }
-
-  async function loadQuickActions() {
-    if (ctx._quickActionsLoaded) return;
-    if (!state || !state.session || !state.session.sb) {
-      ctx._quickActions = getDefaultQuickActions();
-      ctx._quickActionsLoaded = true;
-      return;
-    }
-    try {
-      var { data, error } = await state.session.sb
-        .from('chat_quick_actions')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-      if (error) throw error;
-      if (data && data.length > 0) {
-        ctx._quickActions = data;
-      } else {
-        ctx._quickActions = getDefaultQuickActions();
-      }
-    } catch (e) {
-      console.warn('[live-chat] load quick actions failed, using defaults:', e);
-      ctx._quickActions = getDefaultQuickActions();
-    }
-    ctx._quickActionsLoaded = true;
   }
 
   // ── Waiting Time Helper (untuk mode 'connecting') ──
@@ -500,19 +90,6 @@
     var h = Math.floor(m / 60);
     var rm = m % 60;
     return h + 'j' + (rm > 0 ? rm + 'm' : '');
-  }
-
-  // ── Inactive Session Helper ──
-  function inactiveMinutes(s) {
-    var ref = s.last_message_at || s.updated_at;
-    if (!ref) return 0;
-    return waitingMinutes(ref);
-  }
-
-  function isNearAutoClose(s) {
-    var m = inactiveMinutes(s);
-    // Tunjukkan warning kalau sudah 70% dari timeout
-    return m >= Math.floor(ctx.AUTO_CLOSE_MINUTES * 0.7);
   }
 
   function getAdminName() {
@@ -653,6 +230,9 @@
     ctx.popupEl.classList.remove('closing');
     ctx.fabEl.classList.add('open');
 
+    // Load quick actions for customer chips
+    if (!ctx.quickActions.length) loadQuickActions();
+
     // Subscribe ke admin presence untuk deteksi online/offline
     if (!_presenceChannels.length) subscribeAdminPresence();
 
@@ -789,17 +369,7 @@
       + '</div>'
       + '<div class="lc-messages" id="lcMessages"></div>'
       + '<div class="lc-reply-indicator" id="lcReplyIndicator"></div>'
-      + '<div class="lc-offline-banner" id="lcOfflineBanner" style="display:none"></div>'
-      + '<div class="lc-attach-preview" id="lcAttachPreview" style="display:none">'
-        + '<div class="lc-attach-preview-inner">'
-          + '<img id="lcAttachPreviewImg" src="" alt="Preview">'
-          + '<button class="lc-attach-preview-remove" id="lcAttachRemoveBtn" title="Hapus gambar"><i data-lucide="x"></i></button>'
-          + '<div class="lc-attach-preview-loading" id="lcAttachLoading" style="display:none"><div class="lc-attach-spinner"></div> Mengirim...</div>'
-        + '</div>'
-      + '</div>'
       + '<div class="lc-input-area">'
-      + '<button class="lc-attach-btn" id="lcAttachBtn" title="Kirim gambar"><i data-lucide="image-plus"></i></button>'
-      + '<input type="file" id="lcAttachFile" accept="image/*" style="display:none">'
       + '<textarea class="lc-input" id="lcInput" placeholder="Ketik pesan..." rows="1"></textarea>'
       + '<button class="lc-send" id="lcSendBtn" title="Kirim"><i data-lucide="send"></i></button>'
       + '</div>';
@@ -819,40 +389,6 @@
       }
     };
 
-    // Attachment button binding
-    var attachBtn = $('lcAttachBtn');
-    var attachFile = $('lcAttachFile');
-    var attachPreview = $('lcAttachPreview');
-    var attachPreviewImg = $('lcAttachPreviewImg');
-    var attachRemoveBtn = $('lcAttachRemoveBtn');
-
-    if (attachBtn && attachFile) {
-      attachBtn.onclick = function () { attachFile.click(); };
-      attachFile.onchange = function (e) {
-        var file = e.target.files && e.target.files[0];
-        if (!file || !file.type.startsWith('image/')) return;
-        if (file.size > 5 * 1024 * 1024) {
-          toast('Gambar maksimal 5MB');
-          return;
-        }
-        var reader = new FileReader();
-        reader.onload = function (ev) {
-          ctx._uploadingImg = { file: file, preview: ev.target.result };
-          if (attachPreviewImg) attachPreviewImg.src = ev.target.result;
-          if (attachPreview) attachPreview.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-      };
-    }
-    if (attachRemoveBtn) {
-      attachRemoveBtn.onclick = function () {
-        ctx._uploadingImg = null;
-        if (attachPreview) attachPreview.style.display = 'none';
-        if (attachPreviewImg) attachPreviewImg.src = '';
-      };
-    }
-
     // Pre-fill pending message dari tombol produk
     if (ctx.pendingMessage) {
       var pInp = $('lcInput');
@@ -864,16 +400,10 @@
       }
       ctx.pendingMessage = null;
     }
-
-    // Render offline banner state
-    renderOfflineBanner();
   }
 
   async function loadCustomerMessages() {
     if (!ctx.sessionId || !state || !state.session || !state.session.sb) return;
-
-    // Load quick actions from DB (only once)
-    await loadQuickActions();
 
     // Fetch current session mode from DB to sync UI
     var currentMode = 'ai';
@@ -904,7 +434,6 @@
           sender_type: m.sender_type,
           sender_name: m.sender_name || '',
           message: m.message,
-          image_url: m.image_url || null,
           created_at: m.created_at,
         };
       });
@@ -926,11 +455,6 @@
           .from('chat_sessions')
           .update({ unread_by_customer: 0 })
           .eq('session_id', ctx.sessionId);
-      }
-
-      // Auto-process offline queue kalau online & ada pending messages
-      if (navigator.onLine && ctx._offlineQueue.length > 0) {
-        setTimeout(processOfflineQueue, 500);
       }
     } catch (e) {
       console.error('[live-chat] load messages error:', e);
@@ -1043,10 +567,17 @@
 
     if (!ctx.messages.length) {
       var name = esc(ctx.customerName || 'kamu');
-      var chips = ctx._quickActions.length > 0 ? ctx._quickActions : getDefaultQuickActions();
+      var chips = ctx.quickActions.length > 0
+        ? ctx.quickActions
+        : [
+            { icon: 'package-search', label: 'Tanya Stok Produk' },
+            { icon: 'tag', label: 'Cek Harga' },
+            { icon: 'shield-check', label: 'Info Garansi' },
+            { icon: 'headphones', label: 'Hubungin Admin' },
+          ];
       var chipsHtml = chips.map(function (c, i) {
-        return '<button class="lc-quick-chip" data-q="' + esc(c.label) + '">'
-          + '<i data-lucide="' + esc(c.icon || 'circle-help') + '"></i> ' + esc(c.label)
+        return '<button class="lc-quick-chip" data-q="' + c.label + '">'
+          + '<i data-lucide="' + c.icon + '"></i> ' + c.label
           + '</button>';
       }).join('');
 
@@ -1115,25 +646,11 @@
         msgContent = esc(cleanMsg).replace(/\n/g, '<br>');
       }
 
-      // Render gambar kalau ada
-      var imgHtml = renderImageInMsg(m.image_url, m.sender_type);
-      // Sembunyikan teks "[Gambar]" kalau ada image_url
-      var hideText = (m.image_url && cleanMsg === '[Gambar]');
-
       var checkHtml = (cls.indexOf('customer') !== -1) ? '<span class="lc-msg-check">\u2713\u2713</span>' : '';
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
-        + imgHtml
-        + (hideText ? '' : '<div class="lc-msg-body">' + msgContent + '</div>')
+        + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
-        + '</div>';
-    }).join('')
-    // Render pesan pending (offline queue)
-    + ctx._offlineQueue.map(function (qm) {
-      var qt = new Date(qm.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      return '<div class="lc-msg lc-msg--customer lc-msg--pending">'
-        + '<div class="lc-msg-body">' + esc(qm.text).replace(/\n/g, '<br>') + '</div>'
-        + '<span class="lc-msg-time"><span class="lc-msg-pending-icon">⏳</span> ' + qt + '</span>'
         + '</div>';
     }).join('')
     + '<div class="lc-typing" id="lcTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
@@ -1145,76 +662,32 @@
   async function sendCustomerMessage() {
     var input = $('lcInput');
     var text = input ? input.value.trim() : '';
-    var hasImage = !!ctx._uploadingImg;
-
-    if (!text && !hasImage) return;
-    if (!ctx.sessionId) return;
+    if (!text || !ctx.sessionId) return;
 
     if (input) { input.value = ''; input.style.height = 'auto'; }
 
-    // Kalau offline & ga ada gambar → queue biasa
-    if ((ctx._isOffline || !navigator.onLine) && !hasImage) {
-      addToOfflineQueue(text);
-      renderCustomerMessages();
-      renderOfflineBanner();
-      return;
-    }
-    if (ctx._isOffline || !navigator.onLine) {
-      toast('Tidak bisa mengirim gambar saat offline');
-      return;
-    }
-
-    // Tampilkan loading di preview
-    var loadingEl = $('lcAttachLoading');
-    var previewEl = $('lcAttachPreview');
-
-    // Optimistic add (tanpa image dulu)
+    // Optimistic add
     var tempMsg = {
       id: Date.now(),
       sender_type: 'customer',
       sender_name: ctx.customerName,
-      message: text || (hasImage ? '[Gambar]' : ''),
-      image_url: null,
+      message: text,
       created_at: new Date().toISOString(),
     };
     ctx.messages.push(tempMsg);
     renderCustomerMessages();
 
-    // Upload gambar dulu kalau ada
-    var imageUrl = null;
-    if (hasImage) {
-      if (loadingEl) loadingEl.style.display = 'flex';
-      imageUrl = await uploadChatImage(ctx._uploadingImg.file, ctx.sessionId);
-      // Hapus preview
-      ctx._uploadingImg = null;
-      if (previewEl) previewEl.style.display = 'none';
-      if (loadingEl) loadingEl.style.display = 'none';
-
-      if (!imageUrl) {
-        toast('Gagal mengunggah gambar');
-        ctx.messages = ctx.messages.filter(function (m) { return m.id !== tempMsg.id; });
-        renderCustomerMessages();
-        return;
-      }
-      // Update optimistic message dengan image URL
-      tempMsg.image_url = imageUrl;
-      renderCustomerMessages();
-    }
-
     // Insert to DB
     if (state && state.session && state.session.sb) {
       try {
-        var insertData = {
-          session_id: ctx.sessionId,
-          sender_type: 'customer',
-          sender_name: ctx.customerName,
-          message: text || (imageUrl ? '[Gambar]' : ''),
-        };
-        if (imageUrl) insertData.image_url = imageUrl;
-
         var { error } = await state.session.sb
           .from('chat_messages')
-          .insert([insertData]);
+          .insert([{
+            session_id: ctx.sessionId,
+            sender_type: 'customer',
+            sender_name: ctx.customerName,
+            message: text,
+          }]);
 
         if (error) throw error;
 
@@ -1222,7 +695,7 @@
         var { error: uErr } = await state.session.sb
           .from('chat_sessions')
           .update({
-            last_message: text || '[Gambar]',
+            last_message: text,
             last_message_at: new Date().toISOString(),
             unread_by_admin: 1,
           })
@@ -1231,31 +704,37 @@
         // If session update failed (deleted/closed), recreate session
         if (uErr) {
           console.warn('[live-chat] session update failed, recreating...');
+          // Remove the message that went to dead session
           ctx.messages = ctx.messages.filter(function (m) { return m.id !== tempMsg.id; });
 
           var newSess = await createNewSession();
           if (newSess) {
-            var retryData = Object.assign({}, insertData, { session_id: ctx.sessionId });
-            await state.session.sb.from('chat_messages').insert([retryData]);
+            // Re-insert message under new session
+            await state.session.sb
+              .from('chat_messages')
+              .insert([{
+                session_id: ctx.sessionId,
+                sender_type: 'customer',
+                sender_name: ctx.customerName,
+                message: text,
+              }]);
             ctx.messages.push(tempMsg);
             renderCustomerMessages();
+            // Re-subscribe realtime to new session
             subscribeCustomerRealtime();
           }
         }
 
-        // If mode is 'ai', forward to webhook (text only)
-        if (text) {
-          var session = await getSessionFromDB(ctx.sessionId);
-          if (session && session.mode === 'ai' && N8N_LIVE_CHAT_URL) {
-            forwardToWebhook(text, session);
-          }
+        // If mode is 'ai', forward to webhook
+        var session = await getSessionFromDB(ctx.sessionId);
+        if (session && session.mode === 'ai' && N8N_LIVE_CHAT_URL) {
+          forwardToWebhook(text, session);
         }
       } catch (e) {
         console.error('[live-chat] send message error:', e);
+        // Remove optimistic message on failure
         ctx.messages = ctx.messages.filter(function (m) { return m.id !== tempMsg.id; });
-        if (text && !imageUrl) addToOfflineQueue(text);
         renderCustomerMessages();
-        renderOfflineBanner();
       }
     }
   }
@@ -1496,7 +975,6 @@
             sender_type: m.sender_type,
             sender_name: m.sender_name || '',
             message: m.message,
-            image_url: m.image_url || null,
             created_at: m.created_at,
           });
           renderCustomerMessages();
@@ -1533,7 +1011,19 @@
             created_at: new Date().toISOString(),
           });
           renderCustomerMessages();
-          showRatingUI();
+
+          // Replace input area with "Mulai Chat Baru" button
+          var inputArea = ctx.popupEl.querySelector('.lc-input-area');
+          if (inputArea && !inputArea.querySelector('#lcNewSessionBtn')) {
+            inputArea.innerHTML = '<button class="lc-form-submit" id="lcNewSessionBtn" style="width:100%;margin-top:0"><i data-lucide="plus" style="margin-right:6px"></i>Mulai Chat Baru</button>';
+            $('lcNewSessionBtn').onclick = function () {
+              clearCustomerSession();
+              ctx.sessionId = null;
+              ctx.messages = [];
+              cleanupCustomerRealtime();
+              renderCustomerForm();
+            };
+          }
 
           // Update header status
           var statusText = $('lcHeaderStatusText');
@@ -1870,11 +1360,11 @@
 
     el.innerHTML =
       '<div class="lc-inbox" id="lcInbox">'
-      + '<div class="lc-inbox-sessions">'
+      + '<div class="lc-inbox-sessions" id="lcInboxSessions">'
       + '<div class="lc-inbox-sessions-head">'
       + '<h3><i data-lucide="messages-square"></i> Sesi Chat</h3>'
       + '<div style="display:flex;align-items:center;gap:6px">'
-      + '<button class="lc-qa-settings-btn" id="lcQaSettingsBtn" title="Atur Quick Actions" onclick="window.__lcOpenQaSettings()"><i data-lucide="settings-2"></i></button>'
+      + '<button class="lc-qa-settings-btn" onclick="window.__lcOpenQuickActions()" title="Pertanyaan Cepat"><i data-lucide="message-square-plus"></i></button>'
       + '<span class="lc-inbox-sessions-count" id="lcSessionCount">0</span>'
       + '</div>'
       + '</div>'
@@ -1894,6 +1384,7 @@
       + '</div>'
       + '<div class="lc-inbox-chat" id="lcInboxChat">'
       + '<div class="lc-inbox-empty" id="lcInboxEmpty">'
+      + '<button class="lc-sidebar-toggle lc-sidebar-toggle--empty" onclick="window.__lcToggleSidebar()" title="Tutup sidebar"><i data-lucide="panel-left-close"></i></button>'
       + '<i data-lucide="messages-square"></i>'
       + '<h3>Inbox Chat</h3>'
       + '<p>Pilih sesi chat untuk melihat percakapan</p>'
@@ -1980,11 +1471,11 @@
         waitEl = '<span class="' + wCls + '">' + waitingTimeStr(s.updated_at || s.last_message_at) + '</span>';
       }
 
-      return '<div class="lc-session-item' + (isActive ? ' active' : '') + (s.unread_by_admin > 0 ? ' has-unread' : '') + (isConnecting ? ' is-waiting' : '') + (isNearAutoClose(s) ? ' is-inactive-warn' : '') + '" '
+      return '<div class="lc-session-item' + (isActive ? ' active' : '') + (s.unread_by_admin > 0 ? ' has-unread' : '') + (isConnecting ? ' is-waiting' : '') + '" '
         + 'onclick="window.__lcSelectSession(\'' + s.session_id + '\')">'
         + '<div class="lc-session-avatar">' + esc(initial) + '</div>'
         + '<div class="lc-session-info">'
-        + '<div class="lc-session-name">' + esc(s.customer_name) + ' <span class="lc-session-mode ' + statusInfo.cls + '">' + statusInfo.label + '</span>' + (isNearAutoClose(s) ? ' <span class="lc-session-inactive-badge" title="Sesi akan ditutup otomatis"><i data-lucide="clock" style="width:10px;height:10px;margin-right:2px"></i>idle</span>' : '') + '</div>'
+        + '<div class="lc-session-name">' + esc(s.customer_name) + ' <span class="lc-session-mode ' + statusInfo.cls + '">' + statusInfo.label + '</span></div>'
         + '<div class="lc-session-preview' + (ctx._typingSessions[s.session_id] ? ' is-typing' : '') + '">' + (ctx._typingSessions[s.session_id] ? '<span class="lc-session-typing-text">mengetik<span class="lc-typing-dots-inline"><span>.</span><span>.</span><span>.</span></span></span>' : esc(s.last_message || 'Belum ada pesan')) + '</div>'
         + '</div>'
         + '<div class="lc-session-meta">'
@@ -2029,25 +1520,25 @@
     }
 
     var f = ctx.activeFilter;
-    var sel = function (val) { return f === val ? ' lc-inbox-summary-card--selected' : ''; };
+    var sel = function (val) { return f === val ? ' lc-pill--selected' : ''; };
 
     el.innerHTML =
-      '<div class="lc-inbox-summary-card lc-inbox-summary-card--ai' + sel('ai') + '" onclick="window.__lcSwitchFilter(\'ai\')">'
-      + '<span class="lc-inbox-summary-num">' + ai + '</span>'
-      + '<span class="lc-inbox-summary-label">AI</span>'
-      + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--waiting' + sel('connecting') + '" onclick="window.__lcSwitchFilter(\'connecting\')">'
-      + '<span class="lc-inbox-summary-num">' + waiting + '</span>'
-      + '<span class="lc-inbox-summary-label">Menunggu</span>'
-      + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--active' + sel('admin') + '" onclick="window.__lcSwitchFilter(\'admin\')">'
-      + '<span class="lc-inbox-summary-num">' + active + '</span>'
-      + '<span class="lc-inbox-summary-label">Aktif</span>'
-      + '</div>'
-      + '<div class="lc-inbox-summary-card lc-inbox-summary-card--closed" onclick="window.__lcSwitchFilter(\'closed\')">'
-      + '<span class="lc-inbox-summary-num">' + ctx.closedCount + '</span>'
-      + '<span class="lc-inbox-summary-label">Selesai</span>'
-      + '</div>';
+      '<button class="lc-pill lc-pill--ai' + sel('ai') + '" onclick="window.__lcSwitchFilter(\'ai\')">'
+      + '<span class="lc-pill-dot lc-pill-dot--ai"></span>'
+      + 'AI <span class="lc-pill-count">' + ai + '</span>'
+      + '</button>'
+      + '<button class="lc-pill lc-pill--waiting' + sel('connecting') + '" onclick="window.__lcSwitchFilter(\'connecting\')">'
+      + '<span class="lc-pill-dot lc-pill-dot--waiting"></span>'
+      + 'Menunggu <span class="lc-pill-count">' + waiting + '</span>'
+      + '</button>'
+      + '<button class="lc-pill lc-pill--active' + sel('admin') + '" onclick="window.__lcSwitchFilter(\'admin\')">'
+      + '<span class="lc-pill-dot lc-pill-dot--active"></span>'
+      + 'Aktif <span class="lc-pill-count">' + active + '</span>'
+      + '</button>'
+      + '<button class="lc-pill lc-pill--closed" onclick="window.__lcSwitchFilter(\'closed\')">'
+      + '<span class="lc-pill-dot lc-pill-dot--closed"></span>'
+      + 'Selesai <span class="lc-pill-count">' + ctx.closedCount + '</span>'
+      + '</button>';
   }
 
   // ── Tab Badges ──────────────────────────────────
@@ -2088,10 +1579,27 @@
     if (chatEl) {
       chatEl.innerHTML =
         '<div class="lc-inbox-empty">'
+        + '<button class="lc-sidebar-toggle lc-sidebar-toggle--empty" onclick="window.__lcToggleSidebar()" title="Tutup sidebar"><i data-lucide="panel-left-close"></i></button>'
         + '<i data-lucide="messages-square"></i>'
         + '<h3>Inbox Chat</h3>'
         + '<p>Pilih sesi chat untuk melihat percakapan</p>'
         + '</div>';
+    }
+  }
+
+  // ── Sidebar Collapse Toggle ───────────────────────
+  function toggleSidebar() {
+    ctx.sidebarCollapsed = !ctx.sidebarCollapsed;
+    var inbox = $('lcInbox');
+    var sessionsEl = $('lcInboxSessions');
+    var toggleBtn = document.querySelector('.lc-sidebar-toggle');
+    if (!inbox) return;
+    if (ctx.sidebarCollapsed) {
+      inbox.classList.add('lc-inbox--collapsed');
+      if (toggleBtn) toggleBtn.title = 'Buka sidebar';
+    } else {
+      inbox.classList.remove('lc-inbox--collapsed');
+      if (toggleBtn) toggleBtn.title = 'Tutup sidebar';
     }
   }
 
@@ -2129,6 +1637,7 @@
     if (chatEl) {
       chatEl.innerHTML =
         '<div class="lc-inbox-empty">'
+        + '<button class="lc-sidebar-toggle lc-sidebar-toggle--empty" onclick="window.__lcToggleSidebar()" title="Tutup sidebar"><i data-lucide="panel-left-close"></i></button>'
         + '<i data-lucide="messages-square"></i>'
         + '<h3>' + (tab === 'history' ? 'Riwayat Chat' : 'Inbox Chat') + '</h3>'
         + '<p>Pilih sesi untuk melihat percakapan</p>'
@@ -2256,6 +1765,7 @@
 
     chatEl.innerHTML =
       '<div class="lc-inbox-chat-head">'
+      + '<button class="lc-sidebar-toggle" onclick="window.__lcToggleSidebar()" title="Tutup sidebar"><i data-lucide="panel-left-close"></i></button>'
       + '<div class="lc-session-avatar" style="width:36px;height:36px;font-size:13px;border-radius:10px">' + esc((session.customer_name || 'C').charAt(0).toUpperCase()) + '</div>'
       + '<div>'
       + '<div class="lc-inbox-chat-name">' + esc(session.customer_name) + '</div>'
@@ -2270,7 +1780,6 @@
       + (isClosed ? '<button class="lc-delete-session-btn" onclick="window.__lcDeleteSession(\'' + sessionId + '\')" title="Hapus sesi"><i data-lucide="trash-2"></i></button>' : '<button class="lc-close-session-btn" onclick="window.__lcCloseSession(\'' + sessionId + '\')"><i data-lucide="x" style="margin-right:3px"></i>Tutup</button>')
       + '</div>'
       + '</div>'
-      + '<div class="lc-inbox-rating" id="lcAdminRating" style="display:none"></div>'
       + '<div class="lc-inbox-messages" id="lcAdminMessages">'
       + '<div class="lc-typing" id="lcCustomerTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>'
       + '</div>'
@@ -2279,46 +1788,13 @@
         ? '<textarea class="lc-inbox-input" disabled placeholder="Sesi telah ditutup" rows="1" style="opacity:0.5"></textarea>'
           + '<button class="lc-inbox-send" disabled style="opacity:0.4"><i data-lucide="send"></i></button>'
         : (isAdmin
-          ? '<button class="lc-attach-btn lc-admin-attach-btn" id="lcAdminAttachBtn" title="Kirim gambar"><i data-lucide="image-plus"></i></button>'
-            + '<input type="file" id="lcAdminAttachFile" accept="image/*" style="display:none">'
-            + '<div class="lc-attach-preview lc-admin-attach-preview" id="lcAdminAttachPreview" style="display:none">'
-              + '<div class="lc-attach-preview-inner">'
-                + '<img id="lcAdminAttachPreviewImg" src="" alt="Preview">'
-                + '<button class="lc-attach-preview-remove" id="lcAdminAttachRemoveBtn" title="Hapus gambar"><i data-lucide="x"></i></button>'
-                + '<div class="lc-attach-preview-loading" id="lcAdminAttachLoading" style="display:none"><div class="lc-attach-spinner"></div> Mengirim...</div>'
-              + '</div>'
-            + '</div>'
-            + '<textarea class="lc-inbox-input" id="lcAdminInput" placeholder="Balas pesan..." rows="1"></textarea>'
+          ? '<textarea class="lc-inbox-input" id="lcAdminInput" placeholder="Balas pesan..." rows="1"></textarea>'
             + '<button class="lc-inbox-send" id="lcAdminSendBtn"><i data-lucide="send"></i></button>'
           : '<textarea class="lc-inbox-input" id="lcAdminInput" disabled placeholder="' + (session.mode === 'admin' ? 'Ditangani oleh ' + esc(session.handled_by || 'admin lain') : 'Klik Takeover untuk mengambil alih dan membalas') + '" rows="1" style="opacity:0.6"></textarea>'
             + '<button class="lc-inbox-send" id="lcAdminSendBtn" disabled style="opacity:0.6"><i data-lucide="send"></i></button>'))
       + '</div>';
 
     // Load messages
-    // Load rating for this session (async, non-blocking)
-    if (isClosed && state.session.sb) {
-      state.session.sb
-        .from('chat_ratings')
-        .select('*')
-        .eq('session_id', sessionId)
-        .maybeSingle()
-        .then(function (ratingData) {
-          var ratingEl = $('lcAdminRating');
-          if (!ratingEl || !ratingData) return;
-          var starsHtml = '';
-          for (var i = 1; i <= 5; i++) {
-            starsHtml += '<span class="lc-admin-rating-star' + (i <= ratingData.rating ? ' filled' : '') + '"><i data-lucide="star"></i></span>';
-          }
-          ratingEl.innerHTML = '<div class="lc-admin-rating-inner">'
-            + starsHtml
-            + (ratingData.feedback ? '<span class="lc-admin-rating-fb">' + esc(ratingData.feedback) + '</span>' : '')
-            + '</div>';
-          ratingEl.style.display = '';
-          if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [ratingEl] });
-        })
-        .catch(function () { /* ignore */ });
-    }
-
     try {
       var { data } = await state.session.sb
         .from('chat_messages')
@@ -2358,37 +1834,6 @@
           } catch (e) { /* channel not ready */ }
         }
       };
-
-      // Admin attachment binding
-      var aAttachBtn = $('lcAdminAttachBtn');
-      var aAttachFile = $('lcAdminAttachFile');
-      var aPreview = $('lcAdminAttachPreview');
-      var aPreviewImg = $('lcAdminAttachPreviewImg');
-      var aRemoveBtn = $('lcAdminAttachRemoveBtn');
-
-      if (aAttachBtn && aAttachFile) {
-        aAttachBtn.onclick = function () { aAttachFile.click(); };
-        aAttachFile.onchange = function (e) {
-          var file = e.target.files && e.target.files[0];
-          if (!file || !file.type.startsWith('image/')) return;
-          if (file.size > 5 * 1024 * 1024) { toast('Gambar maksimal 5MB'); return; }
-          var reader = new FileReader();
-          reader.onload = function (ev) {
-            ctx._adminUploadingImg = { file: file, preview: ev.target.result };
-            if (aPreviewImg) aPreviewImg.src = ev.target.result;
-            if (aPreview) aPreview.style.display = 'block';
-          };
-          reader.readAsDataURL(file);
-          e.target.value = '';
-        };
-      }
-      if (aRemoveBtn) {
-        aRemoveBtn.onclick = function () {
-          ctx._adminUploadingImg = null;
-          if (aPreview) aPreview.style.display = 'none';
-          if (aPreviewImg) aPreviewImg.src = '';
-        };
-      }
     }
   }
 
@@ -2445,14 +1890,11 @@
 
       // FIX BUG 3: Tambah badge AI icon di bubble
       var aiBadge = isAi ? '<span class="lc-ai-badge" title="G5 AI Assistant">&#x2728;</span>' : '';
-      var adminImgHtml = renderImageInMsg(m.image_url, m.sender_type);
-      var adminHideText = (m.image_url && cleanMsg === '[Gambar]');
       var checkHtml = (cls.indexOf('customer') !== -1) ? '<span class="lc-msg-check">\u2713\u2713</span>' : '';
       return '<div class="lc-msg ' + cls + '">'
         + senderHtml
         + aiBadge
-        + adminImgHtml
-        + (adminHideText ? '' : '<div class="lc-msg-body">' + msgContent + '</div>')
+        + '<div class="lc-msg-body">' + msgContent + '</div>'
         + '<span class="lc-msg-time">' + t + checkHtml + '</span>'
         + '</div>';
     }).join('') + '<div class="lc-typing" id="lcCustomerTyping"><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div><div class="lc-typing-dot"></div></div>';
@@ -2469,39 +1911,21 @@
   async function sendAdminReply(sessionId) {
     var input = $('lcAdminInput');
     var text = input ? input.value.trim() : '';
-    var hasImage = !!ctx._adminUploadingImg;
-
-    if (!text && !hasImage) return;
+    if (!text) return;
 
     if (input) { input.value = ''; input.style.height = 'auto'; }
 
     var adminName = getAdminName();
-    var aLoadingEl = $('lcAdminAttachLoading');
-    var aPreviewEl = $('lcAdminAttachPreview');
-
-    // Upload gambar dulu kalau ada
-    var imageUrl = null;
-    if (hasImage) {
-      if (aLoadingEl) aLoadingEl.style.display = 'flex';
-      imageUrl = await uploadChatImage(ctx._adminUploadingImg.file, sessionId);
-      ctx._adminUploadingImg = null;
-      if (aPreviewEl) aPreviewEl.style.display = 'none';
-      if (aLoadingEl) aLoadingEl.style.display = 'none';
-      if (!imageUrl) { toast('Gagal mengunggah gambar'); return; }
-    }
 
     try {
-      var insertPayload = {
-        session_id: sessionId,
-        sender_type: 'admin',
-        sender_name: adminName,
-        message: text || (imageUrl ? '[Gambar]' : ''),
-      };
-      if (imageUrl) insertPayload.image_url = imageUrl;
-
       var { data: inserted, error } = await state.session.sb
         .from('chat_messages')
-        .insert([insertPayload])
+        .insert([{
+          session_id: sessionId,
+          sender_type: 'admin',
+          sender_name: adminName,
+          message: text,
+        }])
         .select()
         .single();
 
@@ -2511,7 +1935,7 @@
       await state.session.sb
         .from('chat_sessions')
         .update({
-          last_message: text || '[Gambar]',
+          last_message: text,
           last_message_at: new Date().toISOString(),
           unread_by_customer: 1,
         })
@@ -2602,6 +2026,7 @@
         if (chatEl) {
           chatEl.innerHTML =
             '<div class="lc-inbox-empty">'
+            + '<button class="lc-sidebar-toggle lc-sidebar-toggle--empty" onclick="window.__lcToggleSidebar()" title="Tutup sidebar"><i data-lucide="panel-left-close"></i></button>'
             + '<i data-lucide="messages-square"></i>'
             + '<h3>Inbox Chat</h3>'
             + '<p>Pilih sesi chat untuk melihat percakapan</p>'
@@ -2722,7 +2147,6 @@
 
     try {
       await state.session.sb.from('chat_messages').delete().eq('session_id', sessionId);
-      await state.session.sb.from('chat_ratings').delete().eq('session_id', sessionId);
       await state.session.sb.from('chat_sessions').delete().eq('session_id', sessionId);
       ctx.closedSessions = ctx.closedSessions.filter(function(s) { return s.session_id !== sessionId; });
       ctx.closedCount = Math.max(0, ctx.closedCount - 1);
@@ -2749,7 +2173,6 @@
 
     try {
       await state.session.sb.from('chat_messages').delete().in('session_id', ctx.closedSessions.map(function(s) { return s.session_id; }));
-      await state.session.sb.from('chat_ratings').delete().in('session_id', ctx.closedSessions.map(function(s) { return s.session_id; }));
       await state.session.sb.from('chat_sessions').delete().in('session_id', ctx.closedSessions.map(function(s) { return s.session_id; }));
       ctx.closedSessions = [];
       ctx.closedCount = 0;
@@ -2769,232 +2192,170 @@
   }
 
   // ═══════════════════════════════════════════════════
-  //  QUICK ACTIONS SETTINGS (Admin)
+  //  QUICK ACTIONS SETTINGS
   // ═══════════════════════════════════════════════════
 
-  var _qaAllActions = []; // all actions (including inactive)
+  function getSB() {
+    return (state && state.session && state.session.sb) ? state.session.sb : null;
+  }
 
-  async function loadAllQuickActions() {
-    if (!state || !state.session || !state.session.sb) return;
+  async function loadQuickActions() {
+    var sb = getSB();
+    if (!sb) return;
     try {
-      var { data, error } = await state.session.sb
+      var { data, error } = await sb
         .from('chat_quick_actions')
         .select('*')
         .order('sort_order', { ascending: true });
-      if (error) throw error;
-      _qaAllActions = data || [];
-    } catch (e) {
-      console.error('[live-chat] load all quick actions error:', e);
-      _qaAllActions = [];
-    }
+      if (!error) {
+        ctx.quickActions = (data || []).filter(function (a) { return a.is_active; });
+      }
+    } catch (e) { /* ignore */ }
   }
 
-  async function openQaSettings() {
+  function openQuickActionsPanel() {
+    ctx._qaPanelOpen = true;
+    renderQuickActionsPanel();
+  }
+
+  function closeQuickActionsPanel() {
+    ctx._qaPanelOpen = false;
+    renderAdminInbox($('dashContent') || document.querySelector('[data-panel="chat"]'));
+  }
+
+  async function renderQuickActionsPanel() {
+    var sb = getSB();
+    if (!sb) return;
+
     var chatEl = $('lcInboxChat');
     if (!chatEl) return;
 
-    await loadAllQuickActions();
+    // Fetch all (including inactive) for settings
+    var { data } = await sb
+      .from('chat_quick_actions')
+      .select('*')
+      .order('sort_order', { ascending: true });
 
-    // If table doesn't exist yet (empty + no error), seed defaults
-    if (_qaAllActions.length === 0) {
-      var defaults = [
-        { icon: 'package-search', label: 'Tanya Stok Produk', is_active: true, sort_order: 0 },
-        { icon: 'tag', label: 'Cek Harga', is_active: true, sort_order: 1 },
-        { icon: 'shield-check', label: 'Info Garansi', is_active: true, sort_order: 2 },
-        { icon: 'headphones', label: 'Hubungin Admin', is_active: true, sort_order: 3 },
-      ];
-      try {
-        var { data: inserted, error: insErr } = await state.session.sb
-          .from('chat_quick_actions')
-          .insert(defaults)
-          .select();
-        if (!insErr && inserted) {
-          _qaAllActions = inserted;
-        }
-      } catch (e) { /* table might not exist */ }
-    }
+    var actions = data || [];
 
-    renderQaSettingsPanel(chatEl);
-  }
+    var itemsHtml = actions.length === 0
+      ? '<div class="lc-qa-empty"><i data-lucide="message-square-plus"></i><span>Belum ada pertanyaan cepat</span></div>'
+      : actions.map(function (a, i) {
+        var activeCls = a.is_active ? ' lc-qa-item--active' : ' lc-qa-item--inactive';
+        return '<div class="lc-qa-item' + activeCls + '" data-id="' + a.id + '">'
+          + '<div class="lc-qa-item-drag"><i data-lucide="grip-vertical"></i></div>'
+          + '<div class="lc-qa-item-icon"><i data-lucide="' + esc(a.icon || 'message-circle') + '"></i></div>'
+          + '<div class="lc-qa-item-label">' + esc(a.label) + '</div>'
+          + '<div class="lc-qa-item-actions">'
+          + '<button class="lc-qa-btn lc-qa-btn--toggle" onclick="window.__lcToggleQA(' + a.id + ')" title="' + (a.is_active ? 'Nonaktifkan' : 'Aktifkan') + '">'
+          + '<i data-lucide="' + (a.is_active ? 'eye' : 'eye-off') + '"></i></button>'
+          + (i > 0 ? '<button class="lc-qa-btn" onclick="window.__lcMoveQA(' + a.id + ',\'up\')" title="Pindah ke atas"><i data-lucide="chevron-up"></i></button>' : '')
+          + (i < actions.length - 1 ? '<button class="lc-qa-btn" onclick="window.__lcMoveQA(' + a.id + ',\'down\')" title="Pindah ke bawah"><i data-lucide="chevron-down"></i></button>' : '')
+          + '<button class="lc-qa-btn lc-qa-btn--edit" onclick="window.__lcEditQA(' + a.id + ')" title="Edit"><i data-lucide="pencil"></i></button>'
+          + '<button class="lc-qa-btn lc-qa-btn--delete" onclick="window.__lcDeleteQA(' + a.id + ')" title="Hapus"><i data-lucide="trash-2"></i></button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
 
-  function renderQaSettingsPanel(container) {
-    var itemsHtml = _qaAllActions.map(function (a, idx) {
-      var toggleCls = a.is_active ? 'lc-qa-toggle on' : 'lc-qa-toggle';
-      var labelStyle = a.is_active ? '' : 'opacity:0.45;text-decoration:line-through;';
-      return '<div class="lc-qa-item" data-id="' + (a.id || '') + '" data-idx="' + idx + '">'
-        + '<div class="lc-qa-item-drag" title="Drag untuk urutkan"><i data-lucide="grip-vertical"></i></div>'
-        + '<div class="lc-qa-item-icon"><i data-lucide="' + esc(a.icon || 'circle-help') + '"></i></div>'
-        + '<div class="lc-qa-item-info">'
-        + '<input class="lc-qa-item-label" value="' + esc(a.label || '') + '" placeholder="Label tombol" style="' + labelStyle + '">'
-        + '<input class="lc-qa-item-icon-input" value="' + esc(a.icon || '') + '" placeholder="Nama icon (Lucide)">'
-        + '</div>'
-        + '<button class="' + toggleCls + '" onclick="window.__lcQaToggle(' + idx + ')" title="' + (a.is_active ? 'Nonaktifkan' : 'Aktifkan') + '"></button>'
-        + '<button class="lc-qa-item-del" onclick="window.__lcQaDelete(' + idx + ')" title="Hapus"><i data-lucide="trash-2"></i></button>'
-        + '</div>';
-    }).join('');
-
-    container.innerHTML =
+    chatEl.innerHTML =
       '<div class="lc-qa-panel">'
       + '<div class="lc-qa-panel-head">'
-      + '<div><h3 style="margin:0;font-size:15px;font-weight:700"><i data-lucide="zap" style="margin-right:6px"></i>Quick Actions</h3>'
-      + '<p style="margin:4px 0 0;font-size:12px;color:var(--muted,#6E6A5E)">Atur tombol pintas yang muncul di chat customer</p></div>'
-      + '<div style="display:flex;gap:8px">'
-      + '<button class="lc-qa-add-btn" onclick="window.__lcQaAdd()"><i data-lucide="plus" style="margin-right:4px"></i>Tambah</button>'
-      + '<button class="lc-qa-back-btn" onclick="window.__lcQaBack()"><i data-lucide="arrow-left" style="margin-right:4px"></i>Kembali</button>'
-      + '</div></div>'
-      + '<div class="lc-qa-list" id="lcQaList">' + itemsHtml + '</div>'
+      + '<button class="lc-sidebar-toggle" onclick="window.__lcCloseQuickActions()" title="Kembali"><i data-lucide="arrow-left"></i></button>'
+      + '<div>'
+      + '<div class="lc-qa-panel-title">Pertanyaan Cepat</div>'
+      + '<div class="lc-qa-panel-subtitle">Atur tombol yang muncul di chat customer</div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="lc-qa-panel-body" id="lcQaList">' + itemsHtml + '</div>'
+      + '<div class="lc-qa-panel-footer">'
+      + '<div class="lc-qa-add-form" id="lcQaAddForm">'
+      + '<input class="lc-qa-input" id="lcQaNewLabel" placeholder="Label pertanyaan..." maxlength="40">'
+      + '<input class="lc-qa-input lc-qa-input--icon" id="lcQaNewIcon" placeholder="Icon (lucide)" value="message-circle" maxlength="30">'
+      + '<button class="lc-qa-add-btn" onclick="window.__lcAddQA()"><i data-lucide="plus"></i> Tambah</button>'
+      + '</div>'
+      + '</div>'
       + '</div>';
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    initQaDragSort();
   }
 
-  // Simple drag-reorder via button clicks (up/down arrows)
-  function initQaDragSort() {
-    // We use simple up/down approach instead of full drag
-    // Each item's grip icon shows reorder hint
-  }
-
-  async function qaSaveItem(idx) {
-    var item = _qaAllActions[idx];
-    if (!item || !state || !state.session || !state.session.sb) return;
-    var listEl = $('lcQaList');
-    if (!listEl) return;
-    var itemEl = listEl.children[idx];
-    if (!itemEl) return;
-
-    var labelInput = itemEl.querySelector('.lc-qa-item-label');
-    var iconInput = itemEl.querySelector('.lc-qa-item-icon-input');
-    var newLabel = labelInput ? labelInput.value.trim() : '';
-    var newIcon = iconInput ? iconInput.value.trim() : '';
-
-    if (!newLabel) {
-      if (typeof toast === 'function') toast('Label tidak boleh kosong', 'warning');
+  async function addQuickAction() {
+    var sb = getSB();
+    if (!sb) return;
+    var labelEl = $('lcQaNewLabel');
+    var iconEl = $('lcQaNewIcon');
+    var label = (labelEl ? labelEl.value.trim() : '');
+    var icon = (iconEl ? iconEl.value.trim() : 'message-circle');
+    if (!label) {
+      if (labelEl) labelEl.style.borderColor = '#B91C1C';
       return;
     }
 
-    var updateData = { label: newLabel, icon: newIcon || 'circle-help' };
-    try {
-      if (item.id && String(item.id).indexOf('default_') !== 0) {
-        var { error } = await state.session.sb
-          .from('chat_quick_actions')
-          .update(updateData)
-          .eq('id', item.id);
-        if (error) throw error;
-      }
-      item.label = newLabel;
-      item.icon = newIcon || 'circle-help';
-    } catch (e) {
-      console.error('[live-chat] qa save error:', e);
-      if (typeof toast === 'function') toast('Gagal menyimpan', 'error');
-    }
+    // Get max sort_order
+    var { data: all } = await sb.from('chat_quick_actions').select('sort_order').order('sort_order', { ascending: false }).limit(1);
+    var maxSort = (all && all.length) ? (all[0].sort_order + 1) : 0;
+
+    await sb.from('chat_quick_actions').insert({ label: label, icon: icon, is_active: true, sort_order: maxSort });
+    await loadQuickActions();
+    renderQuickActionsPanel();
   }
 
-  async function qaToggleItem(idx) {
-    var item = _qaAllActions[idx];
-    if (!item || !state || !state.session || !state.session.sb) return;
-    var newActive = !item.is_active;
-    try {
-      if (item.id && String(item.id).indexOf('default_') !== 0) {
-        var { error } = await state.session.sb
-          .from('chat_quick_actions')
-          .update({ is_active: newActive })
-          .eq('id', item.id);
-        if (error) throw error;
-      }
-      item.is_active = newActive;
-    } catch (e) {
-      console.error('[live-chat] qa toggle error:', e);
-    }
-    // Sync to customer-side cache
-    ctx._quickActions = _qaAllActions.filter(function (a) { return a.is_active; });
-    ctx._quickActionsLoaded = false; // force reload next time
-    // Re-render
-    var chatEl = $('lcInboxChat');
-    if (chatEl) renderQaSettingsPanel(chatEl);
+  async function deleteQuickAction(id) {
+    var sb = getSB();
+    if (!sb) return;
+    var ok = typeof showConfirm === 'function'
+      ? await showConfirm('Hapus pertanyaan cepat ini?', 'Hapus', 'delete')
+      : confirm('Hapus pertanyaan cepat ini?');
+    if (!ok) return;
+    await sb.from('chat_quick_actions').delete().eq('id', id);
+    await loadQuickActions();
+    renderQuickActionsPanel();
   }
 
-  async function qaDeleteItem(idx) {
-    var item = _qaAllActions[idx];
+  async function toggleQuickAction(id) {
+    var sb = getSB();
+    if (!sb) return;
+    var item = ctx.quickActions.concat((await sb.from('chat_quick_actions').select('*')).data || []).find(function (a) { return a.id === id; });
     if (!item) return;
-    if (typeof showConfirm === 'function') {
-      var ok = await showConfirm('Hapus quick action "' + (item.label || '') + '"?', 'Hapus', 'delete');
-      if (!ok) return;
-    }
-    try {
-      if (item.id && String(item.id).indexOf('default_') !== 0 && state && state.session && state.session.sb) {
-        var { error } = await state.session.sb
-          .from('chat_quick_actions')
-          .delete()
-          .eq('id', item.id);
-        if (error) throw error;
-      }
-      _qaAllActions.splice(idx, 1);
-      ctx._quickActions = _qaAllActions.filter(function (a) { return a.is_active; });
-      ctx._quickActionsLoaded = false;
-    } catch (e) {
-      console.error('[live-chat] qa delete error:', e);
-    }
-    var chatEl = $('lcInboxChat');
-    if (chatEl) renderQaSettingsPanel(chatEl);
+    await sb.from('chat_quick_actions').update({ is_active: !item.is_active }).eq('id', id);
+    await loadQuickActions();
+    renderQuickActionsPanel();
   }
 
-  async function qaAddItem() {
-    if (!state || !state.session || !state.session.sb) return;
-    var newItem = {
-      icon: 'circle-help',
-      label: '',
-      is_active: true,
-      sort_order: _qaAllActions.length,
-    };
-    try {
-      var { data, error } = await state.session.sb
-        .from('chat_quick_actions')
-        .insert([newItem])
-        .select()
-        .single();
-      if (error) throw error;
-      _qaAllActions.push(data || newItem);
-    } catch (e) {
-      console.error('[live-chat] qa add error:', e);
-      if (typeof toast === 'function') toast('Gagal menambah. Pastikan tabel chat_quick_actions sudah ada.', 'error');
-      return;
-    }
-    var chatEl = $('lcInboxChat');
-    if (chatEl) renderQaSettingsPanel(chatEl);
-    // Focus the new item's label input
-    setTimeout(function () {
-      var listEl = $('lcQaList');
-      if (listEl && listEl.lastElementChild) {
-        var inp = listEl.lastElementChild.querySelector('.lc-qa-item-label');
-        if (inp) inp.focus();
-      }
-    }, 50);
+  async function moveQuickAction(id, dir) {
+    var sb = getSB();
+    if (!sb) return;
+    var { data: all } = await sb.from('chat_quick_actions').select('*').order('sort_order', { ascending: true });
+    if (!all) return;
+    var idx = all.findIndex(function (a) { return a.id === id; });
+    if (idx < 0) return;
+    var swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= all.length) return;
+
+    var tmpSort = all[idx].sort_order;
+    await sb.from('chat_quick_actions').update({ sort_order: all[swapIdx].sort_order }).eq('id', all[idx].id);
+    await sb.from('chat_quick_actions').update({ sort_order: tmpSort }).eq('id', all[swapIdx].id);
+    renderQuickActionsPanel();
   }
 
-  function qaBack() {
-    var chatEl = $('lcInboxChat');
-    if (!chatEl) return;
-    // Reset to empty state
-    chatEl.innerHTML =
-      '<div class="lc-inbox-empty">'
-      + '<i data-lucide="messages-square"></i>'
-      + '<h3>Inbox Chat</h3>'
-      + '<p>Pilih sesi chat untuk melihat percakapan</p>'
-      + '</div>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
+  async function editQuickAction(id) {
+    var sb = getSB();
+    if (!sb) return;
+    var { data: item } = await sb.from('chat_quick_actions').select('*').eq('id', id).single();
+    if (!item) return;
 
-  // Debounced save on input change
-  var _qaSaveTimers = {};
+    var newLabel = prompt('Label pertanyaan:', item.label);
+    if (newLabel === null) return;
+    newLabel = newLabel.trim();
+    if (!newLabel) return;
 
-  function qaDebouncedSave(idx) {
-    if (_qaSaveTimers[idx]) clearTimeout(_qaSaveTimers[idx]);
-    _qaSaveTimers[idx] = setTimeout(function () {
-      qaSaveItem(idx);
-      // Sync to customer cache
-      ctx._quickActions = _qaAllActions.filter(function (a) { return a.is_active; });
-    }, 600);
+    var newIcon = prompt('Icon (nama Lucide):', item.icon);
+    if (newIcon === null) return;
+    newIcon = newIcon.trim() || 'message-circle';
+
+    await sb.from('chat_quick_actions').update({ label: newLabel, icon: newIcon }).eq('id', id);
+    await loadQuickActions();
+    renderQuickActionsPanel();
   }
 
   // ═══════════════════════════════════════════════════
@@ -3015,26 +2376,19 @@
 
   window.__lcSwitchFilter = function (filter) { switchInboxFilter(filter); };
 
+  window.__lcToggleSidebar = function () { toggleSidebar(); };
+
+  window.__lcOpenQuickActions = function () { openQuickActionsPanel(); };
+  window.__lcCloseQuickActions = function () { closeQuickActionsPanel(); };
+  window.__lcAddQA = function () { addQuickAction(); };
+  window.__lcDeleteQA = function (id) { deleteQuickAction(id); };
+  window.__lcToggleQA = function (id) { toggleQuickAction(id); };
+  window.__lcMoveQA = function (id, dir) { moveQuickAction(id, dir); };
+  window.__lcEditQA = function (id) { editQuickAction(id); };
+
   window.__lcDeleteSession = function (id) { deleteSession(id); };
 
   window.__lcClearHistory = function () { clearAllHistory(); };
-
-  window.__lcOpenQaSettings = function () { openQaSettings(); };
-  window.__lcQaToggle = function (idx) { qaToggleItem(idx); };
-  window.__lcQaDelete = function (idx) { qaDeleteItem(idx); };
-  window.__lcQaAdd = function () { qaAddItem(); };
-  window.__lcQaBack = function () { qaBack(); };
-
-  // Delegate input changes in QA panel for debounced save
-  document.addEventListener('input', function (e) {
-    if (e.target.classList && (e.target.classList.contains('lc-qa-item-label') || e.target.classList.contains('lc-qa-item-icon-input'))) {
-      var item = e.target.closest('.lc-qa-item');
-      if (item) {
-        var idx = parseInt(item.getAttribute('data-idx'), 10);
-        if (!isNaN(idx)) qaDebouncedSave(idx);
-      }
-    }
-  });
 
   window.__lcOpenWithMessage = function (msg) {
     ctx.pendingMessage = msg;
@@ -3053,88 +2407,6 @@
   };
 
 
-
-  // ═══════════════════════════════════════════════════
-  //  AUTOCLOSE INACTIVE SESSIONS
-  // ═══════════════════════════════════════════════════
-
-  async function autoCloseInactiveSessions() {
-    if (!state || !state.session || !state.session.sb) return;
-
-    var threshold = new Date(Date.now() - ctx.AUTO_CLOSE_MINUTES * 60 * 1000).toISOString();
-
-    try {
-      // Cari session active yang last_message_at lebih lama dari threshold
-      var { data: staleSessions, error } = await state.session.sb
-        .from('chat_sessions')
-        .select('session_id, customer_name, last_message_at')
-        .eq('status', 'active')
-        .lt('last_message_at', threshold)
-        .isNotNull('last_message_at');
-
-      if (error) throw error;
-      if (!staleSessions || !staleSessions.length) return;
-
-      // Tutup semua session yang stale
-      for (var i = 0; i < staleSessions.length; i++) {
-        var s = staleSessions[i];
-        await state.session.sb
-          .from('chat_sessions')
-          .update({ status: 'closed' })
-          .eq('session_id', s.session_id);
-
-        // Tambahkan pesan sistem
-        await state.session.sb
-          .from('chat_messages')
-          .insert([{
-            session_id: s.session_id,
-            sender_type: 'admin',
-            sender_name: 'Sistem',
-            message: 'Sesi chat ditutup otomatis karena tidak ada aktivitas selama ' + ctx.AUTO_CLOSE_MINUTES + ' menit.',
-          }]);
-
-        console.log('[live-chat] auto-closed session', s.session_id, 'for', s.customer_name);
-      }
-
-      // Reload sessions list
-      loadAdminSessions();
-      loadClosedCount();
-
-      // Kalau session yang sedang dilihat ditutup, reset chat area
-      if (staleSessions.some(function (s) { return s.session_id === ctx.activeSessionId; })) {
-        ctx.activeSessionId = null;
-        var chatEl = $('lcInboxChat');
-        if (chatEl) {
-          chatEl.innerHTML =
-            '<div class="lc-inbox-empty">'
-            + '<i data-lucide="messages-square"></i>'
-            + '<h3>Inbox Chat</h3>'
-            + '<p>Pilih sesi chat untuk melihat percakapan</p>'
-            + '</div>';
-        }
-      }
-    } catch (e) {
-      console.error('[live-chat] auto-close error:', e);
-    }
-  }
-
-  function startAutoCloseTimer() {
-    stopAutoCloseTimer();
-    // Cek tiap 2 menit
-    ctx._autoCloseTimer = setInterval(function () {
-      var isDashboard = $('view-dashboard') && $('view-dashboard').classList.contains('active');
-      var curRole = state && state.session && state.session.currentUser && state.session.currentUser.role;
-      if (!isDashboard || (curRole !== 'admin' && curRole !== 'editor')) return;
-      autoCloseInactiveSessions();
-    }, 120000); // 2 menit
-  }
-
-  function stopAutoCloseTimer() {
-    if (ctx._autoCloseTimer) {
-      clearInterval(ctx._autoCloseTimer);
-      ctx._autoCloseTimer = null;
-    }
-  }
 
   // ═══════════════════════════════════════════════════
   //  NAGGING TIMER (Reminder berulang buat session 'connecting')
@@ -3206,11 +2478,11 @@
   // ── Initialize admin chat features (sessions + realtime) ──
   function initAdminChat() {
     if (!state || !state.session || !state.session.currentUser) return;
+    loadQuickActions();
     loadAdminSessions();
     loadClosedCount();
     subscribeAdminRealtime();
     startNaggingTimer();
-    startAutoCloseTimer();
     // Auto-refresh session list tiap 30 detik biar waiting time indicator update
     if (ctx._sessionListTimer) clearInterval(ctx._sessionListTimer);
     ctx._sessionListTimer = setInterval(function () {
@@ -3313,44 +2585,6 @@
     }
 
     console.log('[live-chat] module loaded');
-
-    // Offline/Online event listeners
-    window.addEventListener('online', updateOfflineState);
-    window.addEventListener('offline', updateOfflineState);
-
-    // Load offline queue dari localStorage
-    loadOfflineQueue();
-
-    // Expose retry function
-    window.__lcRetryQueue = function () {
-      processOfflineQueue();
-    };
-
-    // Image zoom overlay
-    window.__lcZoomImg = function (src) {
-      var existing = document.getElementById('lcZoomOverlay');
-      if (existing) { existing.remove(); return; }
-      var overlay = document.createElement('div');
-      overlay.id = 'lcZoomOverlay';
-      overlay.className = 'lc-zoom-overlay';
-      var safeSrc = esc(src);
-      overlay.innerHTML = '<img class="lc-zoom-img" src="' + safeSrc + '" alt="Zoom">'
-        + '<button class="lc-zoom-close" title="Tutup"><i data-lucide="x"></i></button>';
-      overlay.onclick = function (e) {
-        if (e.target === overlay || e.target.closest('.lc-zoom-close')) overlay.remove();
-      };
-      document.body.appendChild(overlay);
-      requestAnimationFrame(function () { overlay.classList.add('show'); });
-      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [overlay] });
-    };
-
-    // Close zoom on Escape
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        var z = document.getElementById('lcZoomOverlay');
-        if (z) z.remove();
-      }
-    });
 
     // Expose untuk dipanggil dari luar
     window.__lcUpdateOnlineStatus = updateReplyIndicator;
